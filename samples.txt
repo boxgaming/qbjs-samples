@@ -1,1 +1,3 @@
-"simple-drawing-demo.bas", "Simple Drawing Demo", "A simple drawing program in only 14 lines"
+"simple-drawing-demo.bas", "Simple Drawing Demo", "boxgaming", "A simple drawing program in only 14 lines"
+"fractal-fern.bas", "Fractal Fern", "UNKOWN", ""
+"rotating-lorenz-attractor.bas", "Rotating Lorenz Attractor", "vince", ""
