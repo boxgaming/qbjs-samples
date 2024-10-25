@@ -192,7 +192,7 @@ Sub MapAuthors (authors As String, li As Object)
         Dim o As Object
         o = amap(author)
         $If Javascript Then
-            if (o == undefined || typeof o != "array") {
+            if (o == undefined || o.length == undefined) {
                 o = [];
             }
             o.push(li);

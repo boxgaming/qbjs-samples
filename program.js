@@ -344,7 +344,7 @@ if (QB.halted()) { return; };
       var o = {};  /* OBJECT */ 
       o =  QB.arrayValue(amap, [ author]).value;
       //-------- BEGIN JS native code block --------
-            if (o == undefined || typeof o != "array") {
+            if (o == undefined || o.length == undefined) {
                 o = [];
             }
             o.push(li);
