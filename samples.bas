@@ -104,6 +104,7 @@ Sub GetSamples
         a.href = "#" + path
         a.samplePath = path
         a.categories = categories
+        li.sortName = pname
         a.title = "Author:" + Chr$(10) + author + Chr$(10) + Chr$(10) + "Categories: " + Chr$(10) + categories + Chr$(10) + Chr$(10) + "Description:" + Chr$(10) + desc
         Dom.Event a, "click", sub_OnClickSample
         MapAuthors author, li
@@ -282,7 +283,7 @@ $If Javascript Then
         b = list.getElementsByTagName("LI");
         for (i = 0; i < (b.length - 1); i++) {
             shouldSwitch = false;
-            if (b[i].innerHTML.toLowerCase() > b[i + 1].innerHTML.toLowerCase()) {
+            if (b[i].sortName.toLowerCase().localeCompare(b[i + 1].sortName.toLowerCase()) > 0) {
                 shouldSwitch = true;
                 break;
             }

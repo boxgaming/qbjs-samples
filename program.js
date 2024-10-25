@@ -260,6 +260,7 @@ if (QB.halted()) { return; };
       a.href =  "#"  +  path;
       a.samplePath =   path;
       a.categories =   categories;
+      li.sortName =   pname;
       a.title =  "Author:"  + (QB.func_Chr(  10))  +  author + (QB.func_Chr(  10))  + (QB.func_Chr(  10))  + "Categories: "  + (QB.func_Chr(  10))  +  categories + (QB.func_Chr(  10))  + (QB.func_Chr(  10))  + "Description:"  + (QB.func_Chr(  10))  +  desc;
       await Dom.sub_Event(  a,   "click"  ,    sub_OnClickSample);
       await sub_MapAuthors(  author,    li);
@@ -430,7 +431,7 @@ if (QB.halted()) { return; };
         b = list.getElementsByTagName("LI");
         for (i = 0; i < (b.length - 1); i++) {
             shouldSwitch = false;
-            if (b[i].innerHTML.toLowerCase() > b[i + 1].innerHTML.toLowerCase()) {
+            if (b[i].sortName.toLowerCase().localeCompare(b[i + 1].sortName.toLowerCase()) > 0) {
                 shouldSwitch = true;
                 break;
             }
