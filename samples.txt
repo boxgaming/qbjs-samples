@@ -34,3 +34,4 @@
 "particle-fountain.bas", "Particle Fountain", "bplus", "", "Graphics"
 "sine-waves.bas", "Fun with Sin Waves", "vince", "", "Fun with Trig, Graphics"
 "hypotrochoid.bas", "The Hypotrochoid Show", "bplus", "", "Graphics"
+"tetraeder.bas", "Rotating Tetraeder", "William33", "", "Graphics, 3D"
