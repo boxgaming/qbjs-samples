@@ -1,7 +1,7 @@
 Import Dom From "lib/web/dom.bas"
 'Import Console From "lib/web/console.bas"
 
-Const BASE_URL = "?src=https://raw.githubusercontent.com/boxgaming/qbjs-samples/refs/heads/main/"
+Const BASE_URL = "?src=https://raw.githubusercontent.com/boxgaming/qbjs-samples/refs/heads/main/samples/"
 
 Dim Shared As Object amap(), cmap()
 ReDim Shared As String alist(0), clist(0)
@@ -12,7 +12,13 @@ o = Dom.GetImage(0)
 o.style.display = "none"
 o = Dom.Container
 o.style.textAlign = "left"
-o.style.overflow = "visible"
+o.style.overflow = "hidden"
+o.style.fontFamily = "arial, helvetica, sans-serif"
+o.style.fontSize = "14px"
+
+Dim style As Object
+style = Dom.Create("style")
+style.innerText = "a, a:visited { color: rgb(69, 118, 147); }"
 
 Dim panel As Object
 panel = Dom.Create("div")
@@ -32,6 +38,7 @@ slist = Dom.Create("ul", lpanel)
 slist.style.overflowY = "auto"
 slist.style.marginTop = "0px"
 GetSamples
+SortList slist
 
 Dim Shared filter As Object
 filter = Dom.Create("select", header)
@@ -81,7 +88,7 @@ iframe.frameBorder = "0"
 iframe.src = server.value
 
 Dom.Event window, "resize", sub_OnResize
-OnResize
+FireResize
 
 Sub GetSamples
     Dim As String filename, path, pname, author, desc, categories, ts
@@ -99,7 +106,7 @@ Sub GetSamples
         a.categories = categories
         a.title = "Author:" + Chr$(10) + author + Chr$(10) + Chr$(10) + "Categories: " + Chr$(10) + categories + Chr$(10) + Chr$(10) + "Description:" + Chr$(10) + desc
         Dom.Event a, "click", sub_OnClickSample
-        MapAuthor author, li
+        MapAuthors author, li
         MapCategories categories, li
     Wend
     
@@ -173,34 +180,43 @@ $If Javascript Then
 $End If
 End Sub
 
-Sub MapAuthor (author As String, li As Object)
-    Dim o As Object
-    o = amap(author)
-    $If Javascript Then
-        if (o == undefined || typeof o != "array") {
-            o = [];
-        }
-        o.push(li);
-    $End If
-    amap(author) = o
+Sub MapAuthors (authors As String, li As Object)
+    ReDim aarray(0) As String
+    Split authors, ",", aarray()
+    
+    Dim ai As Integer
+    For ai = 1 To UBound(aarray)
+        Dim author As String
+        author = aarray(ai)
+        
+        Dim o As Object
+        o = amap(author)
+        $If Javascript Then
+            if (o == undefined || typeof o != "array") {
+                o = [];
+            }
+            o.push(li);
+        $End If
+        amap(author) = o
 
-    Dim As Integer found, i
-    For i = 1 To UBound(alist)
-        If alist(i) = author Then
-            found = -1
-            Exit For
+        Dim As Integer found, i
+        For i = 1 To UBound(alist)
+            If alist(i) = author Then
+                found = -1
+                Exit For
+            End If
+        Next i
+        If Not found Then
+            i = UBound(alist) + 1
+            ReDim _Preserve alist(i) As String
+            alist(i) = author
         End If
-    Next i
-    If Not found Then
-        i = UBound(alist) + 1
-        ReDim _Preserve alist(i) As String
-        alist(i) = author
-    End If
+    Next ai
+    SortArray alist
 End Sub
 
 Sub MapCategories (categories As String, li As Object)
     ReDim carray(0) As String
-    Dim ccount As Integer
     Split categories, ",", carray()
     
     Dim ci As Integer
@@ -231,4 +247,54 @@ Sub MapCategories (categories As String, li As Object)
             clist(i) = category
         End If
     Next i
+    SortArray clist
+End Sub
+
+Sub SortArray (qbarray() As String)
+    Dim array As Object
+    $If Javascript Then
+        array = [];
+    $End If
+    Dim i As Integer
+    For i = 1 To UBound(qbarray)
+        Dim o As Object
+        o = qbarray(i)
+        $If Javascript Then
+            array.push(o);
+        $End If
+    Next i
+    $If Javascript Then
+        array.sort();
+    $End If
+    For i = 0 To array.length - 1
+        qbarray(i+1) = array[i]
+    Next i
+End Sub
+
+Sub SortList (list As Object)
+$If Javascript Then
+    var i, switching, b, shouldSwitch;
+    switching = true;
+    while (switching) {
+        switching = false;
+        b = list.getElementsByTagName("LI");
+        for (i = 0; i < (b.length - 1); i++) {
+            shouldSwitch = false;
+            if (b[i].innerHTML.toLowerCase() > b[i + 1].innerHTML.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+            }
+        }
+        if (shouldSwitch) {
+            b[i].parentNode.insertBefore(b[i + 1], b[i]);
+            switching = true;
+        }
+    }
+$End If
+End Sub
+
+Sub FireResize
+$If Javascript Then
+    window.dispatchEvent(new Event("resize"));
+$End If
 End Sub
