@@ -26,28 +26,28 @@ Print "     QBJS Sound Demo": Color 8
 Print "     Press a number key 1-8 to play a note": Color 7
 Print
 Color 3
-Print "     ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿  ÚÄÄÄÄÄ¿"
-Print "     ³  1  ³  ³  2  ³  ³  3  ³  ³  4  ³  ³  5  ³  ³  6  ³  ³  7  ³  ³  8  ³"
-Print "     ³  C  ³  ³  D  ³  ³  E  ³  ³  F  ³  ³  G  ³  ³  A  ³  ³  B  ³  ³  C  ³"
-Print "     ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ  ÀÄÄÄÄÄÙ"
+Print "     ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐"
+Print "     │  1  │  │  2  │  │  3  │  │  4  │  │  5  │  │  6  │  │  7  │  │  8  │"
+Print "     │  C  │  │  D  │  │  E  │  │  F  │  │  G  │  │  A  │  │  B  │  │  C  │"
+Print "     └─────┘  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘"
 Print "       Do       Re       Mi       Fa       So       La       Ti       Do   "
 Color 7
 Print
 Print
 Print "                                     0                  1000                 "
-Print "      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  /\ = '+' Key    "
-Print "      ³    Shape    ³      Duration: ³                    ³                  "
-Print "      ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ´                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  \/ = '-' Key    "
-Print "      ³             ³                                                        "
-Print "      ³             ³                0                   1.0                 "
-Print "      ³             ³                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  /\ = Up Arrow   "
-Print "      ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÙ          Gain: ³                    ³                  "
-Print "        Press 0 to                   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  \/ = Down Arrow " 
+Print "      ┌─────────────┐                ┌────────────────────┐  /\ = '+' Key    "
+Print "      │    Shape    │      Duration: │                    │                  "
+Print "      ├─────────────┤                └────────────────────┘  \/ = '-' Key    "
+Print "      │             │                                                        "
+Print "      │             │                0                   1.0                 "
+Print "      │             │                ┌────────────────────┐  /\ = Up Arrow   "
+Print "      └─────────────┘          Gain: │                    │                  "
+Print "        Press 0 to                   └────────────────────┘  \/ = Down Arrow " 
 Print "       Change Shape                                                          "
 Print "                                     0                   1.0                 "
-Print "                                     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  /\ = Right Arrow"
-Print "                              Decay: ³                    ³                  "
-Print "                                     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  \/ = Left Arrow ";
+Print "                                     ┌────────────────────┐  /\ = Right Arrow"
+Print "                              Decay: │                    │                  "
+Print "                                     └────────────────────┘  \/ = Left Arrow ";
 Color 8
 Locate 24, 2
 Print " Press ESC to Quit";
@@ -118,11 +118,11 @@ Sub ShowKey (note, hide)
     Dim col As Integer
     col = 6 + (note-1) * 9
     If hide Then Color 3 Else Color 11
-    Locate 5, col: Print "ÚÄÄÄÄÄ¿"
-    Locate 6, col: Print "³  " + LTrim$(note) + "  ³"
-    Locate 7, col: Print "³"
-    Locate 7, col + 6: Print "³"
-    Locate 8, col: Print "ÀÄÄÄÄÄÙ"
+    Locate 5, col: Print "┌─────┐"
+    Locate 6, col: Print "│  " + LTrim$(note) + "  │"
+    Locate 7, col: Print "│"
+    Locate 7, col + 6: Print "│"
+    Locate 8, col: Print "└─────┘"
 End Sub
 
 Sub ShowShape
@@ -146,7 +146,7 @@ Sub ShowLevel (row, level, unit)
   
     Color 6
     Locate row, 39: Print "                    "
-    Locate row, 39: Print String$(units, "±")
+    Locate row, 39: Print String$(units, "▒")
     
     Color 14
     Locate row-2, 46: Print "      "
