@@ -18,7 +18,7 @@
 "load-font-file.zip", "Load Font from File", "dbox", "Loads a font for display from a TTF file in the virtual file system.", "Fonts"
 "load-font-web.bas", "Load Standard Web Font", "dbox", "Loads a standard web font for display.", "Fonts"
 "load-font-url.bas", "Load Font from URL", "dbox", "Loads a web font from a URL.", "Fonts"
-"qbjs-sound-demo.bas", "QBJS Sound Demo", "dbox", "Demonstration of SOUND support in QBJS", "Sound, Text Mode"
+"qbjs-sound-demo.zip", "QBJS Sound Demo", "dbox", "Demonstration of SOUND support in QBJS", "Sound, Text Mode"
 "qbjs-console.bas", "QBJS Console Library", "dbox", "Demonstration of the QBJS Console Library", "Console, Debugging"
 "qbjs-graphics-2d.bas", "QBJS 2D Graphics", "dbox", "Demonstration of the QBJS 2D Graphics Library", "Graphics, 2D Library"
 "easy-spiral.bas", "Easy Spiral", "bplus", "", "Graphics, 2D Library, 3D, Fun with Trig"
