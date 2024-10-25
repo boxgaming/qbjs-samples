@@ -412,7 +412,9 @@ if (QB.halted()) { return; };
 //-------- END JS native code block --------
    } 
    //-------- BEGIN JS native code block --------
-        array.sort();
+        array.sort(function (a, b) {
+            return a.toLowerCase().localeCompare(b.toLowerCase());
+        });
 //-------- END JS native code block --------
    var ___v2788304 = 0; ___l209622: for ( i=  0 ;  i <=  array.length -  1;  i= i + 1) { if (QB.halted()) { return; } ___v2788304++;   if (___v2788304 % 100 == 0) { await QB.autoLimit(); }
       QB.arrayValue(qbarray, [ i + 1]).value =   array[i];
