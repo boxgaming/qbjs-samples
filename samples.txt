@@ -53,7 +53,7 @@
 "orbit-patterns.bas", "Orbit Patterns", "bplus", "Can we find speeds for disks going in  orbits around center st they form patterns?", "Graphics"
 "sphere-spiral.bas", "Sphere Spiral", "bplus", "sb spiral of chatGPT - fixed by kay63 trans and mod by me, b+ 2023-01-04", "Graphics"
 "cartoid-and-beyond.bas", "Cardioid and Beyond", "bplus", "", "Graphics"
-"hyptno-mezmerize.bas", "Hypno Mezmerizing Thingamajig", "Dav", "Hypno Mezmerizing Thingamajig", "Graphics"
+"hypno-mezmerize.bas", "Hypno Mezmerizing Thingamajig", "Dav", "Hypno Mezmerizing Thingamajig", "Graphics"
 "fun-with-draw.bas", "DRAW Context Fun", "bplus", "", "Graphics"
 "flame-on.bas", "Flame On", "bplus", "", "Graphics"
 "sine-wave-water.bas", "Sine Wave Water", "Dav", "", "Fun with Trig, Graphics"
