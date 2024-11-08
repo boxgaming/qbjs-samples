@@ -58,3 +58,7 @@
 "flame-on.bas", "Flame On", "bplus", "", "Graphics"
 "sine-wave-water.bas", "Sine Wave Water", "Dav", "", "Fun with Trig, Graphics"
 "plasma-pulse.bas", "Plasma with Pulse Factor", "Dav", "", "Graphics"
+"sleighless.zip", "Sleighless! (GX)", "dbox", "Oh no! Santa has fallen out of the sleigh!  Rudolph is gone and now Santa must save Christmas alone and... Sleighless!", "Games, GX"
+"enemy-space.zip", "Enemy Space (GX)", "dbox", "You have jumped through the wormhole into enemy space, surrounded by the forces of the evil Klaxxon space empire.  You must rescue as many of your fellow captured rebel prisoners as you can.  But don't take too long, there's only one opportunity to open the wormhole for your return and... escape from Enemy Space!", "Games, GX"
+"ruins.zip", "Ruins of Zeugma (GX)", "dbox", "You have just discovered the hidden Ruins of Zeugma, long rumored to be filled with indescribable riches.  The ancient civilization was also thought to have developed potions of incredible power that could temporarily give superhuman abilities.   But you must hurry... there is no telling how much longer what is left of the ruins will be left standing.   Can you collect all of the gold as you run through the Ruins of Zeugma?", "Games, GX"
+"legend-of-gx.zip", "Legend of GX", "dbox", "This is not a full replication of the original title but is here as demonstration of the GX game engine.", "Games, GX"
