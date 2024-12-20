@@ -68,3 +68,4 @@
 "relief-3d.bas", "Relief 3D", "DANILIN", "", "Graphics, 3D"
 "xonix.bas", "Xonix", "DANILIN", "", "Text Mode"
 "ascii-cube.bas", "ASCII Cube", "DANILIN", "", "Text Mode"
+"russian-circle-diagram.bas", "Russian Circle Diagram", "DANILIN", "", "Graphics"
