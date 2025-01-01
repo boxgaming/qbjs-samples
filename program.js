@@ -22,13 +22,13 @@ async function _Dom() {
     }
 //-------- END JS native code block --------
 
-async function sub_Alert(text/*STRING*/) {
+async function sub_Alert(text/*SINGLE*/) {
 if (QB.halted()) { return; }; 
    //-------- BEGIN JS native code block --------
         alert(text);
 //-------- END JS native code block --------
 }
-async function func_Confirm(text/*STRING*/) {
+async function func_Confirm(text/*SINGLE*/) {
 if (QB.halted()) { return; }; 
 var Confirm = null;
    //-------- BEGIN JS native code block --------
@@ -36,7 +36,7 @@ var Confirm = null;
 //-------- END JS native code block --------
 return Confirm;
 }
-async function sub_Add(e/*OBJECT*/,parent/*OBJECT*/,beforeElement/*OBJECT*/) {
+async function sub_Add(e/*SINGLE*/,parent/*SINGLE*/,beforeElement/*SINGLE*/) {
 if (QB.halted()) { return; }; 
    //-------- BEGIN JS native code block --------
         if (typeof e == "string") {
@@ -57,7 +57,7 @@ if (QB.halted()) { return; };
         parent.insertBefore(e, beforeElement);
 //-------- END JS native code block --------
 }
-async function func_Create(etype/*STRING*/,parent/*OBJECT*/,content/*STRING*/,eid/*STRING*/,beforeElement/*OBJECT*/) {
+async function func_Create(etype/*SINGLE*/,parent/*SINGLE*/,content/*SINGLE*/,eid/*SINGLE*/,beforeElement/*SINGLE*/) {
 if (QB.halted()) { return; }; 
 var Create = null;
    //-------- BEGIN JS native code block --------
@@ -80,12 +80,12 @@ var Create = null;
 //-------- END JS native code block --------
 return Create;
 }
-async function sub_Create(etype/*STRING*/,parent/*OBJECT*/,content/*STRING*/,eid/*STRING*/,beforeElement/*OBJECT*/) {
+async function sub_Create(etype/*SINGLE*/,parent/*SINGLE*/,content/*SINGLE*/,eid/*SINGLE*/,beforeElement/*SINGLE*/) {
 if (QB.halted()) { return; }; 
    var e = 0;  /* SINGLE */ 
    e =  (await func_Create(  etype,    parent,    content,    eid,    beforeElement));
 }
-async function sub_Event(target/*OBJECT*/,eventType/*STRING*/,callbackFn/*OBJECT*/) {
+async function sub_Event(target/*SINGLE*/,eventType/*SINGLE*/,callbackFn/*SINGLE*/) {
 if (QB.halted()) { return; }; 
    //-------- BEGIN JS native code block --------
         if (typeof target == "string") {
@@ -110,7 +110,7 @@ var Container = null;
 //-------- END JS native code block --------
 return Container;
 }
-async function func_Get(eid/*STRING*/) {
+async function func_Get(eid/*SINGLE*/) {
 if (QB.halted()) { return; }; 
 var Get = null;
    //-------- BEGIN JS native code block --------
@@ -118,15 +118,15 @@ var Get = null;
 //-------- END JS native code block --------
 return Get;
 }
-async function func_GetImage(imageId/*INTEGER*/) {
-if (QB.halted()) { return; }; imageId = Math.round(imageId); 
+async function func_GetImage(imageId/*SINGLE*/) {
+if (QB.halted()) { return; }; 
 var GetImage = null;
    //-------- BEGIN JS native code block --------
         GetImage = QB.getImage(imageId);
 //-------- END JS native code block --------
 return GetImage;
 }
-async function sub_Remove(e/*OBJECT*/) {
+async function sub_Remove(e/*SINGLE*/) {
 if (QB.halted()) { return; }; 
    //-------- BEGIN JS native code block --------
         if (typeof e == "string") {
@@ -137,7 +137,7 @@ if (QB.halted()) { return; };
         }
 //-------- END JS native code block --------
 }
-async function func_Prompt(text/*STRING*/,defaultValue/*STRING*/) {
+async function func_Prompt(text/*SINGLE*/,defaultValue/*SINGLE*/) {
 if (QB.halted()) { return; }; 
 var Prompt = null;
    var result = '';  /* STRING */ 
@@ -148,19 +148,19 @@ var Prompt = null;
    Prompt =   result;;
 return Prompt;
 }
-return {
-sub_Add: sub_Add,
-sub_Alert: sub_Alert,
-func_Confirm: func_Confirm,
-sub_Create: sub_Create,
-func_Create: func_Create,
-sub_Event: sub_Event,
-func_Container: func_Container,
-func_Get: func_Get,
-func_GetImage: func_GetImage,
-sub_Remove: sub_Remove,
-func_Prompt: func_Prompt,
-};
+this.sub_Add = sub_Add;
+this.sub_Alert = sub_Alert;
+this.func_Confirm = func_Confirm;
+this.sub_Create = sub_Create;
+this.func_Create = func_Create;
+this.sub_Event = sub_Event;
+this.func_Container = func_Container;
+this.sub_Get = QB.sub_Get;
+this.func_Get = func_Get;
+this.func_GetImage = func_GetImage;
+this.sub_Remove = sub_Remove;
+this.func_Prompt = func_Prompt;
+return this;
 }
 const Dom = await _Dom();
 /* static method variables: */ 
@@ -211,12 +211,12 @@ QB.start(); QB.setTypeMap({ GXPOSITION:[{ name: 'x', type: 'LONG' }, { name: 'y'
    grpa =  (await Dom.func_Create( "optgroup"  ,    filter));
    grpa.label =  "Author";
    var i = 0;  /* INTEGER */ 
-   var ___v7641413 = 0; ___l0: for ( i=  1 ;  i <= (QB.func_UBound(  clist));  i= i + 1) { if (QB.halted()) { return; } ___v7641413++;   if (___v7641413 % 100 == 0) { await QB.autoLimit(); }
+   var ___v7055475 = 0; for ( i=  1 ;  i <= (QB.func_UBound(  clist));  i= i + 1) { if (QB.halted()) { return; } ___v7055475++;   if (___v7055475 % 100 == 0) { await QB.autoLimit(); }
       opt =  (await Dom.func_Create( "option"  ,    grpc,   QB.arrayValue(clist, [ i]).value));
       opt.ftype =  "category";
       opt.value =  QB.arrayValue(clist, [ i]).value;
    } 
-   var ___v1068624 = 0; ___l3576428: for ( i=  1 ;  i <= (QB.func_UBound(  alist));  i= i + 1) { if (QB.halted()) { return; } ___v1068624++;   if (___v1068624 % 100 == 0) { await QB.autoLimit(); }
+   var ___v5334240 = 0; for ( i=  1 ;  i <= (QB.func_UBound(  alist));  i= i + 1) { if (QB.halted()) { return; } ___v5334240++;   if (___v5334240 % 100 == 0) { await QB.autoLimit(); }
       opt =  (await Dom.func_Create( "option"  ,    grpa,   QB.arrayValue(alist, [ i]).value));
       opt.ftype =  "author";
       opt.value =  QB.arrayValue(alist, [ i]).value;
@@ -244,6 +244,22 @@ QB.start(); QB.setTypeMap({ GXPOSITION:[{ name: 'x', type: 'LONG' }, { name: 'y'
    iframe.src =   server.value;
    await Dom.sub_Event(  window ,   "resize"  ,    sub_OnResize);
    await sub_FireResize();
+   var h = '';  /* STRING */ 
+   h =   document.location.hash;
+   if ( h) {
+      var parts = QB.initArray([], '');  /* STRING */ 
+      await sub_Split(  h,   "="  ,    parts);
+      if ((QB.func_UBound(  parts))  ==   2 ) {
+         if (QB.arrayValue(parts, [ 1]).value  ==  "#src"  ) {
+            iframe.src =   server.value +  BASE_URL + QB.arrayValue(parts, [ 2]).value;
+         } else if (QB.arrayValue(parts, [ 1]).value  ==  "#author"  || QB.arrayValue(parts, [ 1]).value  ==  "#category"  ) {
+            filter.value =  QB.arrayValue(parts, [ 2]).value;
+            //-------- BEGIN JS native code block --------
+                filter.dispatchEvent(new Event("change"));
+//-------- END JS native code block --------
+         }
+      }
+   }
 QB.end();
 
 async function sub_GetSamples() {
@@ -252,12 +268,12 @@ if (QB.halted()) { return; };
    ts =  (QB.func_Str( QB.func_Timer()));
    filename =  "https://raw.githubusercontent.com/boxgaming/qbjs-samples/refs/heads/main/samples.txt?ts="  +  ts;
    await QB.sub_Open(filename, QB.INPUT, 1);
-   var ___v480418 = 0; ___l7075312: while (~(QB.func_EOF(  1))) { if (QB.halted()) { return; }___v480418++;   if (___v480418 % 100 == 0) { await QB.autoLimit(); }
-      var ___v5364588 = new Array(5); await QB.sub_InputFromFile(1, ___v5364588);    path = ___v5364588[0];    pname = ___v5364588[1];    author = ___v5364588[2];    desc = ___v5364588[3];    categories = ___v5364588[4]; 
+   var ___v5795186 = 0; while (!(QB.func_EOF(  1))) { if (QB.halted()) { return; }___v5795186++;   if (___v5795186 % 100 == 0) { await QB.autoLimit(); }
+      var ___v2895625 = new Array(5); await QB.sub_InputFromFile(1, ___v2895625);    path = ___v2895625[0];    pname = ___v2895625[1];    author = ___v2895625[2];    desc = ___v2895625[3];    categories = ___v2895625[4]; 
       var li = {};  /* OBJECT */ var a = {};  /* OBJECT */ 
       li =  (await Dom.func_Create( "li"  ,    slist));
       a =  (await Dom.func_Create( "a"  ,    li,    pname));
-      a.href =  "#"  +  path;
+      a.href =  "#src="  +  path;
       a.samplePath =   path;
       a.categories =   categories;
       li.sortName =   pname;
@@ -299,12 +315,14 @@ if (QB.halted()) { return; };
    await sub_SetVisible(  0);
    var o = {};  /* OBJECT */ 
    if ( opt.ftype ==  "author"  ) {
+      location.hash =  "author="  +  opt.value;
       o =  QB.arrayValue(amap, [ opt.value]).value;
    } else {
+      location.hash =  "category="  +  opt.value;
       o =  QB.arrayValue(cmap, [ opt.value]).value;
    }
    var i = 0;  /* INTEGER */ 
-   var ___v6161923 = 0; ___l7288614: for ( i=  0 ;  i <=  o.length -  1;  i= i + 1) { if (QB.halted()) { return; } ___v6161923++;   if (___v6161923 % 100 == 0) { await QB.autoLimit(); }
+   var ___v3019480 = 0; for ( i=  0 ;  i <=  o.length -  1;  i= i + 1) { if (QB.halted()) { return; } ___v3019480++;   if (___v3019480 % 100 == 0) { await QB.autoLimit(); }
       o[i].style.display =  "list-item";
    } 
 }
@@ -317,7 +335,7 @@ if (QB.halted()) { return; };
    var i = 0;  /* INTEGER */ 
    var s = '';  /* STRING */ 
    QB.resizeArray(results, [{l:0,u:sarray.length}], '', false);  /* STRING */ 
-   var ___v4082566 = 0; ___l2480838: for ( i=  0 ;  i <=  sarray.length +  1;  i= i + 1) { if (QB.halted()) { return; } ___v4082566++;   if (___v4082566 % 100 == 0) { await QB.autoLimit(); }
+   var ___v7747401 = 0; for ( i=  0 ;  i <=  sarray.length +  1;  i= i + 1) { if (QB.halted()) { return; } ___v7747401++;   if (___v7747401 % 100 == 0) { await QB.autoLimit(); }
       //-------- BEGIN JS native code block --------
             s = sarray[i]
 //-------- END JS native code block --------
@@ -339,7 +357,7 @@ if (QB.halted()) { return; };
    var aarray = QB.initArray([{l:0,u:0}], '');  /* STRING */ 
    await sub_Split(  authors,   ","  ,   aarray);
    var ai = 0;  /* INTEGER */ 
-   var ___v7070014 = 0; ___l9476965: for ( ai=  1 ;  ai <= (QB.func_UBound(  aarray));  ai= ai + 1) { if (QB.halted()) { return; } ___v7070014++;   if (___v7070014 % 100 == 0) { await QB.autoLimit(); }
+   var ___v140176 = 0; for ( ai=  1 ;  ai <= (QB.func_UBound(  aarray));  ai= ai + 1) { if (QB.halted()) { return; } ___v140176++;   if (___v140176 % 100 == 0) { await QB.autoLimit(); }
       var author = '';  /* STRING */ 
       author =  QB.arrayValue(aarray, [ ai]).value;
       var o = {};  /* OBJECT */ 
@@ -352,13 +370,13 @@ if (QB.halted()) { return; };
 //-------- END JS native code block --------
       QB.arrayValue(amap, [ author]).value =   o;
       var found = 0;  /* INTEGER */ var i = 0;  /* INTEGER */ 
-      var ___v4271988 = 0; ___l9837131: for ( i=  1 ;  i <= (QB.func_UBound(  alist));  i= i + 1) { if (QB.halted()) { return; } ___v4271988++;   if (___v4271988 % 100 == 0) { await QB.autoLimit(); }
+      var ___v7607236 = 0; for ( i=  1 ;  i <= (QB.func_UBound(  alist));  i= i + 1) { if (QB.halted()) { return; } ___v7607236++;   if (___v7607236 % 100 == 0) { await QB.autoLimit(); }
          if (QB.arrayValue(alist, [ i]).value  ==   author) {
             found =   - 1;
-            break ___l9837131;
+            break;
          }
       } 
-      if (~ found) {
+      if (! found) {
          i =  (QB.func_UBound(  alist))  +  1;
          QB.resizeArray(alist, [{l:0,u:i}], '', true);  /* STRING */ 
          QB.arrayValue(alist, [ i]).value =   author;
@@ -371,7 +389,7 @@ if (QB.halted()) { return; };
    var carray = QB.initArray([{l:0,u:0}], '');  /* STRING */ 
    await sub_Split(  categories,   ","  ,   carray);
    var ci = 0;  /* INTEGER */ 
-   var ___v6924219 = 0; ___l4633799: for ( ci=  1 ;  ci <= (QB.func_UBound(  carray));  ci= ci + 1) { if (QB.halted()) { return; } ___v6924219++;   if (___v6924219 % 100 == 0) { await QB.autoLimit(); }
+   var ___v8144900 = 0; for ( ci=  1 ;  ci <= (QB.func_UBound(  carray));  ci= ci + 1) { if (QB.halted()) { return; } ___v8144900++;   if (___v8144900 % 100 == 0) { await QB.autoLimit(); }
       var category = '';  /* STRING */ 
       category =  QB.arrayValue(carray, [ ci]).value;
       var o = {};  /* OBJECT */ 
@@ -384,13 +402,13 @@ if (QB.halted()) { return; };
 //-------- END JS native code block --------
       QB.arrayValue(cmap, [ category]).value =   o;
       var found = 0;  /* INTEGER */ var i = 0;  /* INTEGER */ 
-      var ___v6304556 = 0; ___l6800396: for ( i=  1 ;  i <= (QB.func_UBound(  clist));  i= i + 1) { if (QB.halted()) { return; } ___v6304556++;   if (___v6304556 % 100 == 0) { await QB.autoLimit(); }
+      var ___v7090379 = 0; for ( i=  1 ;  i <= (QB.func_UBound(  clist));  i= i + 1) { if (QB.halted()) { return; } ___v7090379++;   if (___v7090379 % 100 == 0) { await QB.autoLimit(); }
          if (QB.arrayValue(clist, [ i]).value  ==   category) {
             found =   - 1;
-            break ___l6800396;
+            break;
          }
       } 
-      if (~ found) {
+      if (! found) {
          i =  (QB.func_UBound(  clist))  +  1;
          QB.resizeArray(clist, [{l:0,u:i}], '', true);  /* STRING */ 
          QB.arrayValue(clist, [ i]).value =   category;
@@ -405,7 +423,7 @@ if (QB.halted()) { return; };
         array = [];
 //-------- END JS native code block --------
    var i = 0;  /* INTEGER */ 
-   var ___v5319874 = 0; ___l2269004: for ( i=  1 ;  i <= (QB.func_UBound(  qbarray));  i= i + 1) { if (QB.halted()) { return; } ___v5319874++;   if (___v5319874 % 100 == 0) { await QB.autoLimit(); }
+   var ___v453528 = 0; for ( i=  1 ;  i <= (QB.func_UBound(  qbarray));  i= i + 1) { if (QB.halted()) { return; } ___v453528++;   if (___v453528 % 100 == 0) { await QB.autoLimit(); }
       var o = {};  /* OBJECT */ 
       o =  QB.arrayValue(qbarray, [ i]).value;
       //-------- BEGIN JS native code block --------
@@ -417,7 +435,7 @@ if (QB.halted()) { return; };
             return a.toLowerCase().localeCompare(b.toLowerCase());
         });
 //-------- END JS native code block --------
-   var ___v2788304 = 0; ___l209622: for ( i=  0 ;  i <=  array.length -  1;  i= i + 1) { if (QB.halted()) { return; } ___v2788304++;   if (___v2788304 % 100 == 0) { await QB.autoLimit(); }
+   var ___v4140327 = 0; for ( i=  0 ;  i <=  array.length -  1;  i= i + 1) { if (QB.halted()) { return; } ___v4140327++;   if (___v4140327 % 100 == 0) { await QB.autoLimit(); }
       QB.arrayValue(qbarray, [ i + 1]).value =   array[i];
    } 
 }

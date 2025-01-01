@@ -90,6 +90,25 @@ iframe.src = server.value
 Dom.Event window, "resize", sub_OnResize
 FireResize
 
+' Handle bookmark anchor
+Dim h As String
+h = document.location.hash
+If h Then
+    ReDim parts() As String
+    Split h, "=", parts
+    If UBound(parts) = 2 Then
+        If parts(1) = "#src" Then
+            iframe.src = server.value + BASE_URL + parts(2)
+        ElseIf parts(1) = "#author" Or parts(1) = "#category" Then
+            filter.value = parts(2)
+            $If Javascript Then
+                filter.dispatchEvent(new Event("change"));
+            $End If
+        End If
+    End If
+End If
+
+
 Sub GetSamples
     Dim As String filename, path, pname, author, desc, categories, ts
     ts = Str$(Timer)
@@ -101,7 +120,7 @@ Sub GetSamples
     Dim As Object li, a
         li = Dom.Create("li", slist)
         a = Dom.Create("a", li, pname)
-        a.href = "#" + path
+        a.href = "#src=" + path
         a.samplePath = path
         a.categories = categories
         li.sortName = pname
@@ -145,8 +164,10 @@ Sub OnChangeFilter (event As Object)
     SetVisible 0
     Dim o As Object
     If opt.ftype = "author" Then
+        location.hash = "author=" + opt.value
         o = amap(opt.value)
     Else
+        location.hash = "category=" + opt.value
         o = cmap(opt.value)
     End If
     Dim i As Integer
