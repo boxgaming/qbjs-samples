@@ -69,3 +69,5 @@
 "xonix.bas", "Xonix", "DANILIN", "", "Text Mode"
 "ascii-cube.bas", "ASCII Cube", "DANILIN", "", "Text Mode"
 "russian-circle-diagram.bas", "Russian Circle Diagram", "DANILIN", "", "Graphics"
+"pocket-billiards.bas", "Pocket Billiards", "vince", "Mobile-friendly pool game with an interesting twist", "Games, Fun with Trig, Mobile"
+"math-function-utility.bas", "Math Function Utility", "vince", "", "Fun with Trig"

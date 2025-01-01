@@ -143,7 +143,7 @@ piece_color(16) = _rgb(255,0,140)
 piece_color(17) = _rgb(170,0,100)
 
 dim t as double
- 
+
 
 redraw = 1
 
@@ -165,6 +165,14 @@ _title title$
 t = timer
 
 do
+    if _resize then
+
+        size = (_resizeheight - 20)/sh
+
+        screen _newimage(sw*size, sh*size, 32)
+        redraw = 1
+    end if
+
     if (timer - t) > (1/speed) and not pause then
         if valid(pn, px, py + 1, rot) then py = py + 1 else putpiece = 1
 
@@ -221,12 +229,17 @@ do
             next
         next
 
+
+        color _rgb(70,70,70)
+        locate 1,1
+        print title$
+
         _display
         redraw = 0
     end if
 
     k = _keyhit
-    if k then 
+    if k then
         shift = _keydown(100304) or _keydown(100303)
         select case k
         case 18432 'up
@@ -248,7 +261,7 @@ do
                     if not valid(pn, x2, py, rot) then exit for
                 next
                 px = x2 - 1
-            else 
+            else
                 if valid(pn, px + 1, py, rot) then px = px + 1
             end if
             pause = 0
@@ -297,7 +310,7 @@ do
 
         redraw = 1
     end if
-    
+
     _limit 60
 loop
 system
@@ -306,7 +319,7 @@ sub rotate(x, y, pn, rot)
     select case pn
     case 0
         rot_new = rot mod 2
-    case else 
+    case else
         rot_new = rot
     end select
 
