@@ -100,8 +100,10 @@ If h Then
         If parts(1) = "#src" Then
             iframe.src = server.value + BASE_URL + parts(2)
         ElseIf parts(1) = "#author" Or parts(1) = "#category" Then
-            filter.value = parts(2)
+            Dim selectedValue As String
+            selectedValue = parts(2)
             $If Javascript Then
+                filter.value = decodeURI(selectedValue)
                 filter.dispatchEvent(new Event("change"));
             $End If
         End If

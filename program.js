@@ -253,8 +253,10 @@ QB.start(); QB.setTypeMap({ GXPOSITION:[{ name: 'x', type: 'LONG' }, { name: 'y'
          if (QB.arrayValue(parts, [ 1]).value  ==  "#src"  ) {
             iframe.src =   server.value +  BASE_URL + QB.arrayValue(parts, [ 2]).value;
          } else if (QB.arrayValue(parts, [ 1]).value  ==  "#author"  || QB.arrayValue(parts, [ 1]).value  ==  "#category"  ) {
-            filter.value =  QB.arrayValue(parts, [ 2]).value;
+            var selectedValue = '';  /* STRING */ 
+            selectedValue =  QB.arrayValue(parts, [ 2]).value;
             //-------- BEGIN JS native code block --------
+                filter.value = decodeURI(selectedValue)
                 filter.dispatchEvent(new Event("change"));
 //-------- END JS native code block --------
          }
