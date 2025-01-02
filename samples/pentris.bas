@@ -143,9 +143,9 @@ piece_color(16) = _rgb(255,0,140)
 piece_color(17) = _rgb(170,0,100)
 
 dim t as double
+ 
 
-
-redraw = 1
+redraw = -1
 
 speed = 3
 lines = 0
@@ -164,20 +164,26 @@ _title title$
 
 t = timer
 
+
+dim mb_state, ox, oy
+mb_state = 0
+ox = 0
+oy = 0
+
+
 do
     if _resize then
-
         size = (_resizeheight - 20)/sh
-
         screen _newimage(sw*size, sh*size, 32)
-        redraw = 1
+        redraw = -1
     end if
+
 
     if (timer - t) > (1/speed) and not pause then
         if valid(pn, px, py + 1, rot) then py = py + 1 else putpiece = 1
 
         t = timer
-        redraw = 1
+        redraw = -1
     end if
 
     if putpiece then
@@ -196,7 +202,7 @@ do
         rot = 0
 
         putpiece = 0
-        redraw = 1
+        redraw = -1
 
         if not valid(pn, px, py, rot) then
             for y=0 to sh-1
@@ -230,17 +236,66 @@ do
         next
 
 
-        color _rgb(70,70,70)
         locate 1,1
+        color _rgb(88,88,88)
         print title$
 
         _display
         redraw = 0
     end if
 
-    k = _keyhit
-    if k then
-        shift = _keydown(100304) or _keydown(100303)
+    'mouse state
+    k = _keyhit 'override keyboard
+    shift = _keydown(100304) or _keydown(100303)
+
+    mx = _mousex
+    my = _mousey
+    mb = _mousebutton(1)
+    if mb and mb_state = 0 then
+        mb_state = -1
+        ox = mx
+        oy = my
+    end if
+    if mb and mb_state then
+        a = atan2(my - oy, mx - ox) 
+        r = sw*size/4
+        dist = sqr((my - oy)^2 + (mx - ox)^2)
+
+        circle (sw*size/2, sh*size/2), r, rgb(255,255,0)
+        'if dist > 2.5*r then
+        '    line -step(r*cos(a), r*sin(a)), rgb(255,0,0)
+        if dist > r/2 then
+
+            aa = a
+            if a >= -pi/4 and a < pi/4 then aa = 0
+            if a >= -pi and a < -3*pi/4 then aa = pi
+            if a <= pi and a > 3*pi/4 then aa = pi
+            if a >= -3*pi/4 and a < -pi/4 then aa = -pi/2
+            if a <= 3*pi/4 and a >= pi/4 then aa = pi/2
+
+            if dist > r*2 then c = rgb(255,0,0) else c = rgb(255,255,0)
+
+            line -step(r*cos(aa), r*sin(aa)), c
+        end if
+    end if
+    if mb = 0 and mb_state then
+        if a >= -pi/4 and a < pi/4 then k = 19712 'right
+        if a >= -pi and a < -3*pi/4 then k = 19200 'left
+        if a <= pi and a > 3*pi/4 then k = 19200 'left
+        if a >= -3*pi/4 and a < -pi/4 then k = 18432 'up
+        if a <= 3*pi/4 and a >= pi/4 then k = 20480 'down
+
+        if dist > r*2 then shift = -1 else shift = 0
+
+        mb_state = 0
+        redraw = -1
+    end if
+    '''
+
+    'keyboard
+    'k = _keyhit
+    if k then 
+        'shift = _keydown(100304) or _keydown(100303)
         select case k
         case 18432 'up
             if valid(pn, px, py, (rot + 1) mod 4) then rot = (rot + 1) mod 4
@@ -261,7 +316,7 @@ do
                     if not valid(pn, x2, py, rot) then exit for
                 next
                 px = x2 - 1
-            else
+            else 
                 if valid(pn, px + 1, py, rot) then px = px + 1
             end if
             pause = 0
@@ -271,7 +326,7 @@ do
                     if not valid(pn, px, y2, rot) then exit for
                 next
                 py = y2 - 1
-                putpiece = 1
+                putpiece = -1
             else
                 if valid(pn, px, py + 1, rot) then py = py + 1
             end if
@@ -308,9 +363,9 @@ do
             exit do
         end select
 
-        redraw = 1
+        redraw = -1
     end if
-
+    
     _limit 60
 loop
 system
@@ -319,7 +374,7 @@ sub rotate(x, y, pn, rot)
     select case pn
     case 0
         rot_new = rot mod 2
-    case else
+    case else 
         rot_new = rot
     end select
 
@@ -381,7 +436,7 @@ function valid(pn, px, py, rot)
             end if
         next
     next
-    valid = 1
+    valid = -1
 end function
 
 function place(pn, px, py, rot)
@@ -399,7 +454,7 @@ function place(pn, px, py, rot)
     'clear lines
     for y=py-5 to py+5
         if y>=0 and y<sh then
-            clr = 1
+            clr = -1
             for x=0 to sw - 1
                 if board(x, y) = 0 then
                     clr = 0
