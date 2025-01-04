@@ -71,4 +71,4 @@
 "russian-circle-diagram.bas", "Russian Circle Diagram", "DANILIN", "", "Graphics"
 "pocket-billiards.bas", "Pocket Billiards", "vince", "Mobile-friendly pool game with an interesting twist", "Games, Fun with Trig, Mobile"
 "math-function-utility.bas", "Math Function Utility", "vince", "", "Fun with Trig"
-"flow-field.bas", "Flow Field", "issues34", "", "Graphic, Fun with Trig"
+"flow-field.bas", "Flow Field", "issues37", "", "Graphic, Fun with Trig"
