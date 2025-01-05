@@ -72,3 +72,5 @@
 "pocket-billiards.bas", "Pocket Billiards", "vince", "Mobile-friendly pool game with an interesting twist", "Games, Fun with Trig, Mobile"
 "math-function-utility.bas", "Math Function Utility", "vince", "", "Fun with Trig"
 "flow-field.bas", "Flow Field", "issues37", "", "Graphics, Fun with Trig"
+"particle-mist-eddies.bas", "Particle Mist Eddies", "bplus", "", "Graphics, Fun with Trig"
+"parametric-clock.bas", "Parametric Clock", "sprezzo", "", "Graphics"
