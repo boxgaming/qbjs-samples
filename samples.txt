@@ -74,3 +74,4 @@
 "flow-field.bas", "Flow Field", "issues37", "", "Graphics, Fun with Trig"
 "particle-mist-eddies.bas", "Particle Mist Eddies", "bplus", "", "Graphics, Fun with Trig"
 "parametric-clock.bas", "Parametric Clock", "sprezzo", "", "Graphics"
+"logic-circuits.bas", "Logic Circuits", "sprezzo", "", "Emulation"
