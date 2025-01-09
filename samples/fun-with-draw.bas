@@ -24,7 +24,7 @@ Do
             cc = Rand(64, 160)
             If i > 10 Then u = 10 Else u = i
             If i Mod 2 Then cc = 9 Else cc = 15
-            PSet (160, 100)
+            PreSet (160, 100)
             'Draw "ta0"  ' this needed?
             a$ = "S" + Str$(22 - u * 2) + "TA" + Str$(ai) + "C" + Str$(cc) + s$
             Draw a$

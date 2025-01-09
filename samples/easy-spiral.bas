@@ -1,4 +1,4 @@
-Import Gfx From "/lib/graphics/2d.bas"
+Import Gfx From "lib/graphics/2d.bas"
 
 _Title "Easy Spiral" 'b+ 2022-04? from Easy Lang site very Interesting!  https://easylang.online
 ' this one inspired Johnno to post at RCBasic,  https://rcbasic.freeforums.net  , also an interesting site!

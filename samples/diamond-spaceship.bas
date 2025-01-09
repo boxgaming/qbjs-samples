@@ -1,4 +1,4 @@
-Import Gfx From "/lib/graphics/2d.bas"
+Import Gfx From "lib/graphics/2d.bas"
 _Title "Diamond Spaceship" 'b+ 2022-07-23
 ' 2022-7-24 fixed panel problems and added PolyFill routine for rise and fall glowing
 
