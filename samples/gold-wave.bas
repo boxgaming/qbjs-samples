@@ -1,6 +1,6 @@
 _Title "Gold Wave bplus 2018-03-13"
 'translated from SmallBASIC: Goldwave by johnno copied and mod by bplus 2018-01-28
-Import Gfx From "/lib/graphics/2d.bas"
+Import Gfx From "lib/graphics/2d.bas"
 'QB64 version 2017 1106/82 (the day before they switched to version 1.2)
 Const xmax = 600
 Const ymax = 480
