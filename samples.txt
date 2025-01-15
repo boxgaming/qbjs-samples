@@ -43,7 +43,7 @@
 "lander.bas", "Lander", "bplus", "Lunar Lander Game", "Games"
 "flower-wheel.bas", "Flower Wheel", "bplus", "", "Graphics"
 "horse-race.bas", "Horse Race", "bplus", "", "Text Mode"
-"15-squares-puzzle.bas", "15 Squares Puzzle", "bplus", "Use up/down left/right arrow keys to move number blocks into space", "Text Mode, Games"
+"sliding-block-puzzle.bas", "Sliding Block Puzzle", "bplus", "", "Games"
 "spinner2.bas", "Spinner 2", "bplus", "", "Graphics"
 "plasma-plus-voronoi.bas", "Plasma Plus Voronoi", "bplus", "", "Graphics"
 "plasma-plus-voronoi2.bas", "Plasma Plus Voronoi 2", "bplus", "", "Graphics"
@@ -75,3 +75,4 @@
 "particle-mist-eddies.bas", "Particle Mist Eddies", "bplus", "", "Graphics, Fun with Trig"
 "parametric-clock.bas", "Parametric Clock", "sprezzo", "", "Graphics"
 "logic-circuits.bas", "Logic Circuits", "sprezzo", "", "Emulation"
+"texting-fish.bas", "Texting Fish", "bplus", "", "Graphics"
