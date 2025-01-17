@@ -76,7 +76,7 @@
 "parametric-clock.bas", "Parametric Clock", "sprezzo", "", "Graphics"
 "logic-circuits.bas", "Logic Circuits", "sprezzo", "", "Emulation"
 "texting-fish.bas", "Texting Fish", "bplus", "", "Graphics"
-"ansi-draw.bas", "ANSI Draw", "dbox", "Old school text art editor", "Text Mode"
+"ansi-draw.zip", "ANSI Draw", "dbox", "Old school text art editor", "Text Mode"
 "inside-out-torus.bas", "Inside Out Torus", "vince", "", "Fun with Trig, Graphics"
 "music-grid.bas", "Music Grid", "UNKNOWN", "Source: QB64 wiki example", "Play"
 "happy-new-year.bas", "Happy New Year", "UNKNOWN", "Source: QB64 wiki example", "Play"
