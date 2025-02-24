@@ -1,6 +1,7 @@
 DIM SHARED grid(16, 16), grid2(16, 16), cur
 CONST maxx = 512
 CONST maxy = 512
+DIM SHARED lastMouseEvent
 SCREEN _NEWIMAGE(maxx, maxy, 32)
 _TITLE "MusicGrid"
 cleargrid
@@ -55,13 +56,13 @@ END SUB
 
 SUB domousestuff
     DIM x, y
-    DO WHILE _MOUSEINPUT
-        IF _MOUSEBUTTON(1) THEN
-            x = FIX(_MOUSEX \ FIX(maxx \ 16))
-            y = FIX(_MOUSEY \ FIX(maxy \ 16))
-            grid(x, y) = 1 - grid(x, y)
-        END IF
-    LOOP
+    WHILE _MOUSEINPUT: WEND
+    IF _MOUSEBUTTON(1) AND ABS(TIMER - lastMouseEvent) > .25 THEN
+        x = FIX(_MOUSEX \ FIX(maxx \ 16))
+        y = FIX(_MOUSEY \ FIX(maxy \ 16))
+        grid(x, y) = 1 - grid(x, y)
+        lastMouseEvent = TIMER
+    END IF
 END SUB
 
 SUB playgrid

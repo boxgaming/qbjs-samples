@@ -63,7 +63,7 @@
 "ruins.zip", "Ruins of Zeugma (GX)", "dbox", "You have just discovered the hidden Ruins of Zeugma, long rumored to be filled with indescribable riches.  The ancient civilization was also thought to have developed potions of incredible power that could temporarily give superhuman abilities.   But you must hurry... there is no telling how much longer what is left of the ruins will be left standing.   Can you collect all of the gold as you run through the Ruins of Zeugma?", "Games, GX"
 "legend-of-gx.zip", "Legend of GX", "dbox", "This is not a full replication of the original title but is here as demonstration of the GX game engine.", "Games, GX"
 "plinko.bas", "Plinko", "vince", "", "Games"
-"rodrigues-rotation-formula.bas", "Rodrigues' Rotation Formula", "vince", "For use with red/blue 3d glasses. Use left/right arrow keys to adjust the distance between your eyes.", "3D"
+"icosohedron.bas", "Icosohedron", "vince", "", "3D"
 "damesh.bas", "Damesh", "DANILIN", "", "Graphics"
 "relief-3d.bas", "Relief 3D", "DANILIN", "", "Graphics, 3D"
 "xonix.bas", "Xonix", "DANILIN", "", "Text Mode"
