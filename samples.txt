@@ -80,3 +80,4 @@
 "music-grid.bas", "Music Grid", "UNKNOWN", "Source: QB64 wiki example", "Play"
 "happy-new-year.bas", "Happy New Year", "UNKNOWN", "Source: QB64 wiki example", "Play"
 "frosty.bas", "Frosty", "UNKNOWN", "Source: QB64 wiki example", "Play"
+"chaotic-scattering.bas", "Chaotic Scattering", "vince", "", "Fun with Trig"
