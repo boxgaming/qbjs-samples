@@ -18,7 +18,7 @@ phi = 0
 
 zoom = 150
 
-'dim shared sw, sh
+dim shared sw, sh
 sw = 800
 sh = 600
 screen newimage(sw, sh) 
