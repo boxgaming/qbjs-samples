@@ -83,3 +83,4 @@
 "chaotic-scattering.bas", "Chaotic Scattering", "vince", "", "Fun with Trig"
 "voxels.bas", "Voxels", "FellippeHeitor", "", "Graphics, Mouse"
 "ansi-draw.zip", "ANSI Draw", "dbox", "Text mode drawing program", "Text Mode, Drawing, Mouse"
+"platformer-demo.bas", "Platformer Demo", "issues37, AI", "", "Games"
