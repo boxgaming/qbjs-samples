@@ -6,6 +6,8 @@ type balltype
     c  as long
 end type
 
+dim shared img as long
+
 'balls
 dim shared n
 redim shared ball(10) as balltype
