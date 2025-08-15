@@ -61,7 +61,7 @@ Sub AddInput (t)
     s.style.width = "150px"
     i = Dom.Create("input", d)
     i.type = t
-    Dom.Event i, "change", sub_OnInputChange
+    Dom.Event i, "change", @OnInputChange
     If t = "button" Then i.value = "I'm an Input Button, Push Me!"
 End Sub
     

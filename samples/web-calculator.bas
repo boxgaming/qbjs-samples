@@ -182,31 +182,31 @@ Sub InitUI
     btnPanel.style.gridTemplateColumns = "auto auto auto auto"
 
     Dim btn As Object
-    btn = CreateButton("C"): btn.onclick = sub_OnClear
-    btn = CreateButton("<"): btn.onclick = sub_OnBackspace
-    btn = CreateButton(""): btn.onclick = sub_OnBlank
-    btn = CreateButton("/"): btn.onclick = sub_OnOperation
-    btn = CreateButton("9"): btn.onclick = sub_OnNumber
-    btn = CreateButton("8"): btn.onclick = sub_OnNumber
-    btn = CreateButton("7"): btn.onclick = sub_OnNumber
-    btn = CreateButton("*"): btn.onclick = sub_OnOperation
-    btn = CreateButton("6"): btn.onclick = sub_OnNumber
-    btn = CreateButton("5"): btn.onclick = sub_OnNumber
-    btn = CreateButton("4"): btn.onclick = sub_OnNumber
-    btn = CreateButton("-"): btn.onclick = sub_OnOperation
-    btn = CreateButton("3"): btn.onclick = sub_OnNumber
-    btn = CreateButton("2"): btn.onclick = sub_OnNumber
-    btn = CreateButton("1"): btn.onclick = sub_OnNumber
-    btn = CreateButton("+"): btn.onclick = sub_OnOperation
-    btn = CreateButton("+/-"): btn.onclick = sub_OnNegate
-    btn = CreateButton("0"): btn.onclick = sub_OnNumber
-    btn = CreateButton("."): btn.onclick = sub_OnPeriod
-    btn = CreateButton("="): btn.onclick = sub_OnOperation
+    btn = CreateButton("C", @OnClear)
+    btn = CreateButton("<", @OnBackspace)
+    btn = CreateButton("",  @OnBlank)
+    btn = CreateButton("/", @OnOperation)
+    btn = CreateButton("9", @OnNumber)
+    btn = CreateButton("8", @OnNumber)
+    btn = CreateButton("7", @OnNumber)
+    btn = CreateButton("*", @OnOperation)
+    btn = CreateButton("6", @OnNumber)
+    btn = CreateButton("5", @OnNumber)
+    btn = CreateButton("4", @OnNumber)
+    btn = CreateButton("-", @OnOperation)
+    btn = CreateButton("3", @OnNumber)
+    btn = CreateButton("2", @OnNumber)
+    btn = CreateButton("1", @OnNumber)
+    btn = CreateButton("+", @OnOperation)
+    btn = CreateButton("+/-", @OnNegate)
+    btn = CreateButton("0", @OnNumber)
+    btn = CreateButton(".", @OnPeriod)
+    btn = CreateButton("=", @OnOperation)
     
     OnClear
 End Sub
 
-Function CreateButton (label)
+Function CreateButton (label, callback As Sub)
     Dim btn As Object
     btn = Dom.Create("button" , btnPanel)
     btn.innerText = label
@@ -215,5 +215,6 @@ Function CreateButton (label)
     btn.style.fontSize = "20px"
     btn.style.margin = "1px"
     btn.val = label
+    Dom.Event btn, "click", callback
     CreateButton = btn
 End Function

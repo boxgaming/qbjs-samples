@@ -76,5 +76,5 @@ Sub InitControls
     Dom.Create "br", c
     Dim btn
     btn = Dom.Create("button", c, "Add Square")
-    btn.onclick = sub_OnAddSquare
+    Dom.Event btn, "click", @OnAddSquare
 End Sub
