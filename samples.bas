@@ -1,11 +1,13 @@
 Import Dom From "lib/web/dom.bas"
-'Import Console From "lib/web/console.bas"
+Import String From "lib/lang/string.bas"
 
 Const BASE_URL = "?src=https://raw.githubusercontent.com/boxgaming/qbjs-samples/refs/heads/main/samples/"
 
 Dim Shared As Object amap(), cmap()
 ReDim Shared As String alist(0), clist(0)
-Dim Shared lastSelected As String
+Dim Shared As String lastSelected, baseImgUrl
+baseImgUrl = "/qbjs/"
+If document.location.pathname = "/" Then baseImgUrl = ""
 
 Dim o As Object
 o = Dom.GetImage(0)
@@ -20,18 +22,19 @@ Dim style As Object
 style = Dom.Create("style")
 style.innerText = "a, a:visited { color: rgb(69, 118, 147); }"
 
-Dim panel As Object
+Dim Shared panel As Object
 panel = Dom.Create("div")
 panel.style.display = "grid"
 panel.style.gridTemplateColumns = "300px auto"
 
-Dim As Object lpanel, header
+Dim As Object lpanel
+Dim Shared As Object header, headerTitle
 lpanel = Dom.Create("div", panel)
 header = Dom.Create("div", lpanel)
 header.style.display = "grid"
-header.style.gridTemplateColumns = "auto auto"
-header.style.padding = "10px"
-Dom.Create "div", header, "<b>QBJS Samples</b>"
+header.style.gridTemplateColumns = "auto auto 25px"
+headerTitle = Dom.Create("div", header, "<b>QBJS Samples</b>")
+headerTitle.style.margin = "6px"
 
 Dim Shared slist As Object 
 slist = Dom.Create("ul", lpanel)
@@ -42,7 +45,9 @@ SortList slist
 
 Dim Shared filter As Object
 filter = Dom.Create("select", header)
-Dom.Event filter, "change", sub_OnChangeFilter
+filter.style.marginTop = "5px"
+filter.style.marginBottom = "5px"
+Dom.Event filter, "change", @OnChangeFilter
 Dim As Object opt, grpc, grpa
 opt = Dom.Create("option", filter, "Filter - Show All")
 opt.value = "*ALL*"
@@ -63,18 +68,30 @@ For i = 1 To UBound(alist)
     opt.value = alist(i)
 Next i
 
+Dim Shared collapse As Object
+collapse = Dom.Create("img", header)
+collapse.src = baseImgUrl + "img/slide-left.svg"
+collapse.style.width = "20px"
+collapse.style.height = "20px"
+collapse.style.marginLeft = "5px"
+collapse.style.marginTop = "5px"
+collapse.style.cursor = "pointer"
+collapse.title = "Hide Samples List"
+collapse.isCollapsed = 0
+Dom.Event collapse, "click", @OnToggleList
+
+
 Dim rpanel As Object
 rpanel = Dom.Create("div", panel)
 
-Dim Shared server As Object
-Dim spanel As Object
+Dim Shared As Object server, spanel
 spanel = Dom.Create("div", rpanel)
 spanel.style.position = "absolute"
 spanel.style.right = "145px"
 spanel.style.top = "11px"
 Dom.Create "span", spanel, "Server: "
 server = Dom.Create("select", spanel)
-Dom.Event server, "change", sub_OnChangeServer
+Dom.Event server, "change", @OnChangeServer
 opt = Dom.Create("option", server, "Production (qbjs.org)")
 opt.value = "https://qbjs.org"
 opt = Dom.Create("option", server, "Development (github.io)")
@@ -87,7 +104,11 @@ iframe.style.height = (_ResizeHeight) + "px"
 iframe.frameBorder = "0"
 iframe.src = server.value
 
-Dom.Event window, "resize", sub_OnResize
+Dim win As Object
+$If Javascript Then
+    win = window
+$End If
+Dom.Event win, "resize", @OnResize
 FireResize
 
 ' Handle bookmark anchor
@@ -95,7 +116,7 @@ Dim h As String
 h = document.location.hash
 If h Then
     ReDim parts() As String
-    Split h, "=", parts
+    String.Split h, "=", parts
     If UBound(parts) = 2 Then
         If parts(1) = "#src" Then
             iframe.src = server.value + BASE_URL + parts(2)
@@ -127,7 +148,7 @@ Sub GetSamples
         a.categories = categories
         li.sortName = pname
         a.title = "Author:" + Chr$(10) + author + Chr$(10) + Chr$(10) + "Categories: " + Chr$(10) + categories + Chr$(10) + Chr$(10) + "Description:" + Chr$(10) + desc
-        Dom.Event a, "click", sub_OnClickSample
+        Dom.Event a, "click", @OnClickSample
         MapAuthors author, li
         MapCategories categories, li
     Wend
@@ -178,20 +199,23 @@ Sub OnChangeFilter (event As Object)
     Next i
 End Sub
 
-Sub Split (sourceString As String, delimiter As String, results() As String)
-    Dim sarray As Object
-    $If Javascript Then
-        sarray = sourceString.split(delimiter);
-    $End If
-    Dim i As Integer
-    Dim s As String
-    ReDim results(sarray.length) As String
-    For i = 0 To sarray.length + 1
-        $If Javascript Then
-            s = sarray[i]
-        $End if
-        results(i+1) = LTrim$(s)
-    Next i
+Sub OnToggleList
+    If collapse.isCollapsed Then
+        collapse.src = baseImgUrl + "img/slide-left.svg"
+        collapse.title = "Hide Samples List"
+        headerTitle.style.display = "block"
+        filter.style.display = "inline"
+        slist.style.display = "block"
+        panel.style.gridTemplateColumns = "300px auto"
+    Else
+        collapse.src = baseImgUrl + "img/slide-right.svg"
+        collapse.title = "Show Samples List"
+        headerTitle.style.display = "none"
+        filter.style.display = "none"
+        slist.style.display = "none"
+        panel.style.gridTemplateColumns = "30px auto"
+    End If
+    collapse.isCollapsed = Not collapse.isCollapsed
 End Sub
 
 Sub SetVisible (visible As Integer)
@@ -206,7 +230,7 @@ End Sub
 
 Sub MapAuthors (authors As String, li As Object)
     ReDim aarray(0) As String
-    Split authors, ",", aarray()
+    String.Split authors, ",", aarray()
     
     Dim ai As Integer
     For ai = 1 To UBound(aarray)
@@ -241,7 +265,7 @@ End Sub
 
 Sub MapCategories (categories As String, li As Object)
     ReDim carray(0) As String
-    Split categories, ",", carray()
+    String.Split categories, ",", carray()
     
     Dim ci As Integer
     For ci = 1 To UBound(carray)
