@@ -92,3 +92,6 @@
 "sin-waves.bas", "Sin Waves", "Dav", "", "Graphics, Fun with Trig"
 "lissajous-ball.zip", "Lissajous Ball", "bplus, ZXDunny", "", "Graphics"
 "fake-voronoi-plasma.bas", "Fake Voronoi Plasma", "Dav", "", "Graphics"
+"diffusion.bas", "Diffusion", "sprezzo", "", "Graphics"
+"scalar-field.bas", "Scalar Field", "sprezzo", "", "Graphics"
+"vector-field.bas", "Vector Field", "sprezzo", "", "Graphics"
