@@ -1,11 +1,13 @@
 Import Dom From "lib/web/dom.bas"
+Import Gfx From "lib/graphics/2d.bas"
+Option Explicit
 
-Dim Shared tool, cp, btnUndo
+Dim Shared As Object tool, cp, btnUndo, chkFilled, chkRounded, grpFilled, grpRounded, grpRadius, txtRadius
 CreateToolbar
 
-Dim fimage, cimage
-fimage = _NewImage(_Width, _Height)
-cimage = _NewImage(_Width, _Height)
+Dim Shared fimage, cimage
+fimage = _NewImage(_Width, _Height, 32)
+cimage = _NewImage(_Width, _Height, 32)
 
 Dim drawing, lastX, lastY, startX, startY, radius
 Do
@@ -43,14 +45,21 @@ Do
 
             ElseIf tool.value = "Rectangle" Then
                 PrepDrawDest
-                Line (startX, startY)-(_MouseX, _MouseY), SelectedColor, B
+                If chkRounded.checked Then
+                    If chkFilled.checked Then
+                        Gfx.FillRoundRect startX, startY, _MouseX-startX, _MouseY-startY, txtRadius.value, SelectedColor
+                    Else
+                        Gfx.RoundRect startX, startY, _MouseX-startX, _MouseY-startY, txtRadius.value, SelectedColor
+                    End If
+                Else
+                    If chkFilled.checked Then
+                        Line (startX, startY)-(_MouseX, _MouseY), SelectedColor, BF
+                    Else
+                        Line (startX, startY)-(_MouseX, _MouseY), SelectedColor, B
+                    End If
+                End If
                 _Dest 0
-
-            ElseIf tool.value = "Filled Rectangle" Then
-                PrepDrawDest
-                Line (startX, startY)-(_MouseX, _MouseY), SelectedColor, BF
-                _Dest 0
-
+            
             ElseIf tool.value = "Circle" Then
                 PrepDrawDest
                 If Abs(_MouseX - startX) > Abs(_MouseY - startY) Then
@@ -58,20 +67,11 @@ Do
                 Else
                     radius = Abs(_MouseY - startY)
                 End If
-                Circle (startX, startY), radius, SelectedColor
-                _Dest 0
-
-            ElseIf tool.value = "Filled Circle" Then
-                PrepDrawDest
-                If Abs(_MouseX - startX) > Abs(_MouseY - startY) Then
-                    radius = Abs(_MouseX - startX)
+                If chkFilled.checked Then
+                    Gfx.FillCircle startX, startY, radius, SelectedColor
                 Else
-                    radius = Abs(_MouseY - startY)
+                    Circle (startX, startY), radius, SelectedColor
                 End If
-                Dim r
-                For r = 0 To radius Step .3
-                    Circle (startX, startY), r, SelectedColor
-                Next r
                 _Dest 0
             End If
         End If
@@ -86,48 +86,94 @@ Loop
 
 Sub PrepDrawDest
     _FreeImage cimage
-    cimage = _NewImage(_Width, _Height)
+    cimage = _NewImage(_Width, _Height, 32)
     _Dest cimage
 End Sub
 
 Sub OnBtnUndo
     _FreeImage cimage
-    cimage = _NewImage(640, 400)
+    cimage = _NewImage(640, 400, 32)
     btnUndo.disabled = true
 End Sub
 
+Sub OnToolChange
+    If tool.value = "Circle" Or tool.value = "Rectangle" Then
+        grpFilled.style.display = "inline-block"
+    Else
+        grpFilled.style.display = "none"
+    End If
+    If tool.value = "Rectangle" Then
+        grpRounded.style.display = "inline-block"
+        If chkRounded.checked Then
+            grpRadius.style.display = "inline-block"
+        Else
+            grpRadius.style.display = "none"
+        End If
+    Else
+        grpRounded.style.display = "none"
+    End If
+End Sub
+
 Sub CreateToolbar
-    Dom.GetImage(0).style.cursor = "crosshair"
-    Dom.GetImage(0).style.position = "absolute"
-    Dom.GetImage(0).style.border = "0"
-    Dom.GetImage(0).style.margin = "0"
-    Dom.GetImage(0).style.top = "1px"
-    Dom.GetImage(0).style.left = "1px"
+    Dim As Object parent, panel, canvas
+    parent = Dom.Create("div")
+    parent.style.display = "grid"
+    parent.style.gridTemplateColumns = "1fr"
+    parent.style.gridTemplateRows = "auto 42px"
     
-    Dim panel
-    panel = Dom.Create("div")
+    canvas = Dom.GetImage(0)
+    Dom.Add canvas, parent
+    
+    canvas.style.cursor = "crosshair"
+    canvas.style.border = "0"
+    canvas.style.margin = "0"
+    
+    panel = Dom.Create("div", parent)
     Dom.Create "span", panel, "Tool: "
     tool = Dom.Create("select", panel)
     Dom.Create "span", panel, "Color: "
     cp = Dom.Create("input", panel)
     cp.type = "color"
     cp.value = "#ffffff"
+    Dom.Event tool, "change", @OnToolChange
     
+    grpFilled = Dom.Create("div", panel)
+    grpFilled.style.display = "none"
+    grpFilled.style.marginLeft = "10px"
+    Dom.Create "span", grpFilled, "Filled: "
+    chkFilled = Dom.Create("input", grpFilled)
+    chkFilled.type = "checkbox"
+
+    grpRounded = Dom.Create("div", panel)
+    grpRounded.style.display = "none"
+    grpRounded.style.marginLeft = "10px"
+    Dom.Create "span", grpRounded, "Rounded: "
+    chkRounded = Dom.Create("input", grpRounded)
+    chkRounded.type = "checkbox"
+    Dom.Event chkRounded, "change", @OnToolChange
+    grpRadius = Dom.Create("div", grpRounded)
+    grpRadius.style.display = "inline-block"
+    grpRadius.style.marginLeft = "10px"
+    Dom.Create "span", grpRadius, "Radius: "
+    txtRadius = Dom.Create("input", grpRadius, "10")
+    txtRadius.type = "number"
+    txtRadius.min = 1
+    txtRadius.max = 100
+    txtRadius.style.width = "40px"
+
+
     btnUndo = Dom.Create("button", panel, "Undo")
     btnUndo.style.float = "right"
     btnUndo.style.padding = "5px 10px"
     btnUndo.disabled = true
-    Dom.Event btnUndo, "click", sub_OnBtnUndo
+    Dom.Event btnUndo, "click", @OnBtnUndo
 
     panel.style.textAlign = "left"
-    panel.style.position = "absolute"
-    panel.style.bottom = "2px"
-    panel.style.left = "2px"
-    panel.style.right = "2px"
     panel.style.padding = "5px"
     panel.style.fontFamily = "Arial, helvetica, sans-serif"
     panel.style.fontSize = ".85em"
-    panel.style.border = "1px solid #666"
+    panel.style.borderTop = "1px solid #666"
+    panel.style.margin = "0"
     panel.style.backgroundColor = "#333"
     panel.style.verticalAlign = "middle"
 
@@ -141,9 +187,7 @@ Sub InitToolList
     Dom.Create "option", tool, "Freehand"
     Dom.Create "option", tool, "Line"
     Dom.Create "option", tool, "Rectangle"
-    Dom.Create "option", tool, "Filled Rectangle"
     Dom.Create "option", tool, "Circle"
-    Dom.Create "option", tool, "Filled Circle"
 End Sub
     
 Function SelectedColor    
