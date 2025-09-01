@@ -1,7 +1,6 @@
 Import Dom From "lib/web/dom.bas"
 Import Gfx From "lib/graphics/2d.bas"
 Import FS From "lib/io/fs.bas"
-Import Console From "lib/web/console.bas"
 Option Explicit
 
 Dim Shared As Object tool, cp, btnUndo, btnSave, chkFilled, chkRounded
@@ -182,7 +181,6 @@ Sub CreateToolbar
     btnSave.style.padding = "5px 10px"
     btnSave.style.marginLeft = "5px"
     btnSave.disabled = true
-    'Dom.Event btnUndo, "click", @OnBtnUndo
     Dom.Event btnSave, "click", @OnSave
 
 
@@ -194,8 +192,6 @@ Sub CreateToolbar
 
     panel.style.textAlign = "left"
     panel.style.padding = "5px"
-    'panel.style.fontFamily = "Arial, helvetica, sans-serif"
-    'panel.style.fontSize = ".85em"
     panel.style.borderTop = "1px solid #666"
     panel.style.margin = "0"
     panel.style.backgroundColor = "#333"
