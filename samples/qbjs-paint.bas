@@ -1,10 +1,13 @@
 Import Dom From "lib/web/dom.bas"
 Import Gfx From "lib/graphics/2d.bas"
+Import Stx From "lib/lang/string.bas"
 Import FS From "lib/io/fs.bas"
+Import Console From "lib/web/console.bas"
 Option Explicit
 
-Dim Shared As Object tool, cp, btnUndo, btnSave, chkFilled, chkRounded
-Dim Shared As Object grpFilled, grpRounded, grpRadius, txtRadius
+Dim Shared As Object selTool, cp, btnUndo, btnSave, chkFilled, chkRounded
+Dim Shared As Object grpFilled, grpRounded, grpRadius, grpLineWidth, grpLineStyle, grpColor
+Dim Shared As Object txtRadius, txtLineWidth, selLineStyle
 CreateToolbar
 
 Dim Shared fimage, cimage
@@ -34,19 +37,22 @@ Do
             btnUndo.disabled = false
             btnSave.disabled = false
         Else
-            If tool.value = "Freehand" Then
+            Gfx.LineWidth txtLineWidth.value
+            If selTool.value = "Freehand" Then
                 _Dest cimage
+                Gfx.LineCap Gfx.ROUND
+                Gfx.LineDashOff
                 Line (lastX, lastY)-(_MouseX, _MouseY), SelectedColor
                 lastX = _MouseX
                 lastY = _MouseY
                 _Dest 0
                 
-            ElseIf tool.value = "Line" Then
+            ElseIf selTool.value = "Line" Then
                 PrepDrawDest
                 Line (startX, startY)-(_MouseX, _MouseY), SelectedColor
                 _Dest 0
 
-            ElseIf tool.value = "Rectangle" Then
+            ElseIf selTool.value = "Rectangle" Then
                 PrepDrawDest
                 If chkRounded.checked Then
                     If chkFilled.checked Then
@@ -63,13 +69,13 @@ Do
                 End If
                 _Dest 0
 
-            ElseIf tool.value = "Invert Rectangle" Then
+            ElseIf selTool.value = "Invert Rectangle" Then
                 PrepDrawDest
                 _PutImage , fimage, cimage
                 Gfx.InvertRect startX, startY, _MouseX-startX, _MouseY-startY, chkFilled.checked
                 _Dest 0
             
-            ElseIf tool.value = "Circle" Then
+            ElseIf selTool.value = "Circle" Then
                 PrepDrawDest
                 If Abs(_MouseX - startX) > Abs(_MouseY - startY) Then
                     radius = Abs(_MouseX - startX)
@@ -80,6 +86,18 @@ Do
                     Gfx.FillCircle startX, startY, radius, SelectedColor
                 Else
                     Circle (startX, startY), radius, SelectedColor
+                End If
+                _Dest 0
+
+            ElseIf selTool.value = "Ellipse" Then
+                Dim xradius, yradius
+                PrepDrawDest
+                xradius = Abs(_MouseX - startX)
+                yradius = Abs(_MouseY - startY)
+                If chkFilled.checked Then
+                    Gfx.FillEllipse startX, startY, xradius, yradius, 1, SelectedColor
+                Else
+                    Gfx.Ellipse startX, startY, xradius, yradius, 1, SelectedColor
                 End If
                 _Dest 0
             End If
@@ -97,6 +115,21 @@ Sub PrepDrawDest
     _FreeImage cimage
     cimage = _NewImage(_Width, _Height, 32)
     _Dest cimage
+    Gfx.LineCap Gfx.DEFAULT
+    SetLineStyle
+End Sub
+
+Sub SetLineStyle
+    Dim w As Integer
+    If selLineStyle.value = "Solid" Then
+        Gfx.LineDashOff
+    ElseIf selLineStyle.value = "Dotted" Then
+        w = txtLineWidth.value
+        Gfx.LineDash w, w
+    ElseIf selLineStyle.value = "Dashed" Then
+        w = txtLineWidth.value * 4
+        Gfx.LineDash w, w
+    End If
 End Sub
 
 Sub OnUndo
@@ -106,12 +139,21 @@ Sub OnUndo
 End Sub
 
 Sub OnToolChange
-    If tool.value = "Circle" Or tool.value = "Rectangle" Or tool.value = "Invert Rectangle" Then
+    If selTool.value = "Circle" Or selTool.value = "Ellipse" Or _
+       selTool.value = "Rectangle" Or selTool.value = "Invert Rectangle" Then
         grpFilled.style.display = "inline-block"
+        If chkFilled.checked Then
+            grpLineWidth.style.display = "none"
+            grpLineStyle.style.display = "none"
+        Else
+            grpLineWidth.style.display = "inline-block"
+            grpLineStyle.style.display = "inline-block"
+        End If
     Else
         grpFilled.style.display = "none"
+        chkFilled.checked = false
     End If
-    If tool.value = "Rectangle" Then
+    If selTool.value = "Rectangle" Then
         grpRounded.style.display = "inline-block"
         If chkRounded.checked Then
             grpRadius.style.display = "inline-block"
@@ -120,6 +162,19 @@ Sub OnToolChange
         End If
     Else
         grpRounded.style.display = "none"
+        chkRounded.checked = false
+    End If
+    If selTool.value = "Freehand" Then
+        grpLineWidth.style.display = "inline-block"
+        grpLineStyle.style.display = "none"
+    ElseIf selTool.value = "Line" Then
+        grpLineStyle.style.display = "inline-block"
+    End If
+ 
+    If selTool.value = "Invert Rectangle" Then
+        grpColor.style.display = "none"
+    Else
+        grpColor.style.display = "inline-block"
     End If
 End Sub
 
@@ -137,45 +192,60 @@ Sub CreateToolbar
     
     canvas = Dom.GetImage(0)
     Dom.Add canvas, parent
-    
     canvas.style.cursor = "crosshair"
     canvas.style.border = "0"
     canvas.style.margin = "0"
     
+    Dim grpTool As Object
     panel = Dom.Create("div", parent)
-    Dom.Create "span", panel, "Tool: "
-    tool = Dom.Create("select", panel)
-    Dom.Create "span", panel, "Color: "
-    cp = Dom.Create("input", panel)
-    cp.type = "color"
-    cp.value = "#ffffff"
-    Dom.Event tool, "change", @OnToolChange
-    
-    grpFilled = Dom.Create("div", panel)
-    grpFilled.style.display = "none"
-    grpFilled.style.marginLeft = "10px"
-    Dom.Create "span", grpFilled, "Filled: "
+    grpTool = CreateControlGroup("Tool", panel)
+    grpTool.style.display = "inline-block"
+    selTool = Dom.Create("select", grpTool)
+    selTool.style.verticalAlign = "middle"
+    InitList selTool, "Freehand,Line,Rectangle,Invert Rectangle,Circle"
+    Dom.Create "option", selTool, "Ellipse"
+    Dom.Event selTool, "change", @OnToolChange
+
+    ' Fill settings
+    grpFilled = CreateControlGroup("Filled", panel)
     chkFilled = Dom.Create("input", grpFilled)
     chkFilled.type = "checkbox"
+    Dom.Event chkFilled, "change", @OnToolChange
 
-    grpRounded = Dom.Create("div", panel)
-    grpRounded.style.display = "none"
-    grpRounded.style.marginLeft = "10px"
-    Dom.Create "span", grpRounded, "Rounded: "
+    ' Rounded settings
+    grpRounded = CreateControlGroup("Rounded", panel)
     chkRounded = Dom.Create("input", grpRounded)
     chkRounded.type = "checkbox"
     Dom.Event chkRounded, "change", @OnToolChange
-    grpRadius = Dom.Create("div", grpRounded)
-    grpRadius.style.display = "inline-block"
-    grpRadius.style.marginLeft = "10px"
-    Dom.Create "span", grpRadius, "Radius: "
+    grpRadius = CreateControlGroup("Radius", grpRounded)
     txtRadius = Dom.Create("input", grpRadius, "10")
     txtRadius.type = "number"
     txtRadius.min = 1
     txtRadius.max = 100
     txtRadius.style.width = "40px"
+    txtRadius.style.height = "20px"
 
+    ' Line Width
+    grpLineWidth = CreateControlGroup("Line Width", panel)
+    txtLineWidth = Dom.Create("input", grpLineWidth, "2")
+    txtLineWidth.type = "number"
+    txtLineWidth.min = 1
+    txtLineWidth.max = 100
+    txtLineWidth.style.width = "40px"
+    txtLineWidth.style.height = "20px"
+    
+    'Line Style
+    grpLineStyle = CreateControlGroup("Style", panel)
+    selLineStyle = Dom.Create("select", grpLineStyle)
+    InitList selLineStyle, "Solid,Dotted,Dashed" 
 
+    ' Color Picker
+    grpColor = CreateControlGroup("Color", panel)
+    cp = Dom.Create("input", grpColor)
+    cp.type = "color"
+    cp.value = "#ffffff"
+
+    ' Save Button
     btnSave = Dom.Create("button", panel, "Save")
     btnSave.style.float = "right"
     btnSave.style.padding = "5px 10px"
@@ -183,7 +253,7 @@ Sub CreateToolbar
     btnSave.disabled = true
     Dom.Event btnSave, "click", @OnSave
 
-
+    ' Undo Button
     btnUndo = Dom.Create("button", panel, "Undo")
     btnUndo.style.float = "right"
     btnUndo.style.padding = "5px 10px"
@@ -197,20 +267,30 @@ Sub CreateToolbar
     panel.style.backgroundColor = "#333"
     panel.style.verticalAlign = "middle"
 
-    InitToolList
+    'InitToolList
+    OnToolChange
 End Sub
-    
-Sub InitToolList
-    tool.style.marginRight = "15px"
-    tool.style.padding = "5px"
-    tool.style.verticalAlign = "top"
-    Dom.Create "option", tool, "Freehand"
-    Dom.Create "option", tool, "Line"
-    Dom.Create "option", tool, "Rectangle"
-    Dom.Create "option", tool, "Invert Rectangle"
-    Dom.Create "option", tool, "Circle"
+
+Function CreateControlGroup(labelText As String, parent As Object)
+    Dim grp As Object
+    grp = Dom.Create("div", parent)
+    grp.style.display = "none"
+    grp.style.marginRight = "10px"
+    grp.style.verticalAlign = "middle"
+    Dom.Create "span", grp, labelText + ": "
+    CreateControlGroup = grp
+End Function
+
+Sub InitList (sel As Object, options As String)
+    sel.style.padding = "4px"
+    ReDim opts(0) As String
+    Stx.Split options, ",", opts
+    Dim i As Integer
+    For i = 1 To UBound(opts)
+        Dom.Create "option", sel, opts(i)
+    Next i
 End Sub
-    
+
 Function SelectedColor    
     Dim r, g, b, c
     c = cp.value
