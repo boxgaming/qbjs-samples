@@ -2,7 +2,6 @@ Import Dom From "lib/web/dom.bas"
 Import Gfx From "lib/graphics/2d.bas"
 Import Stx From "lib/lang/string.bas"
 Import FS From "lib/io/fs.bas"
-Import Console From "lib/web/console.bas"
 Option Explicit
 
 Dim Shared As Object selTool, cp, btnUndo, btnSave, chkFilled, chkRounded
