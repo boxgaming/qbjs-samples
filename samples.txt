@@ -83,7 +83,6 @@
 "chaotic-scattering.bas", "Chaotic Scattering", "vince", "", "Fun with Trig"
 "voxels.bas", "Voxels", "FellippeHeitor", "", "Graphics, Mouse"
 "ansi-draw.zip", "ANSI Draw", "dbox", "Text mode drawing program", "Text Mode, Drawing, Mouse"
-"platformer-demo.bas", "Platformer Demo", "issues37, AI", "", "Games"
 "bowling.zip", "Bowling", "bplus,johnno", "", "Games"
 "shmup.zip", "SHMUP", "bplus", "Space invaders style text mode shooter", "Text Mode, Games"
 "pulse-plasma-blend.bas", "Pulse Plasma Blend", "Dav, bplus, madscijr", "", "Graphics, Fun with Trig"
