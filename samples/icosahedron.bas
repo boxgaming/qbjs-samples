@@ -1,4 +1,4 @@
-Import GFX From "/lib/graphics/2d.bas"
+Import GFX From "lib/graphics/2d.bas"
 
 dim shared xx(4*3), yy(4*3), zz(4*3)
 dim shared x, y, z
