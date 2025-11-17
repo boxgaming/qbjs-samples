@@ -94,3 +94,7 @@
 "diffusion.bas", "Diffusion", "sprezzo", "", "Graphics"
 "scalar-field.bas", "Scalar Field", "sprezzo", "", "Graphics"
 "vector-field.bas", "Vector Field", "sprezzo", "", "Graphics"
+"sin-cos-play.bas", "SinCosPlay", "Dav", "", "Graphics, Fun with Trig"
+"sin-cos-play2.bas", "SinCosPlay2", "Dav", "", "Graphics, Fun with Trig"
+"sin-cos-play3.bas", "SinCosPlay3", "Dav", "", "Graphics, Fun with Trig"
+"sin-cos-play4.bas", "SinCosPlay4", "Dav", "", "Graphics, Fun with Trig"
