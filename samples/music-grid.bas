@@ -5,7 +5,6 @@ DIM SHARED lastMouseEvent
 SCREEN _NEWIMAGE(maxx, maxy, 32)
 _TITLE "MusicGrid"
 cleargrid
-DIM t#, inp$, cur, oldcur
 DO
     IF TIMER - t# > 1 / 8 THEN cur = (cur + 1) AND 15: t# = TIMER
     IF cur <> oldcur THEN
@@ -15,19 +14,18 @@ DO
         oldcur = cur
     END IF
     domousestuff
-    inp$ = INKEY$
-    IF inp$ = "C" OR inp$ = "c" THEN cleargrid
+    in$ = INKEY$
+    IF in$ = "C" OR in$ = "c" THEN cleargrid
     _LIMIT 60
-LOOP UNTIL inp$ = CHR$(27)
+LOOP UNTIL in$ = CHR$(27)
 
 SUB drawgrid
-    DIM scale, scale2, c&
-    scale = maxx / 16
-    scale2 = FIX(maxx \ 16 - 2)
+    scale! = maxx / 16
+    scale2 = maxx \ 16 - 2
     FOR y = 0 TO 15
         y1 = y * scale!
         FOR x = 0 TO 15
-            x1 = x * scale
+            x1 = x * scale!
             c& = _RGB32(grid2(x, y) * 64 + 64, 0, 0)
             LINE (x1, y1)-(x1 + scale2, y1 + scale2), c&, BF
         NEXT x
@@ -35,7 +33,6 @@ SUB drawgrid
 END SUB
 
 SUB figuregrid
-    DIM x, y
     FOR y = 0 TO 15
         FOR x = 0 TO 15
             grid2(x, y) = grid(x, y)
@@ -65,9 +62,9 @@ SUB domousestuff
     END IF
 END SUB
 
+
 SUB playgrid
-    DIM n$, note$, x, y, scale$
-    n$ = "L16 "
+    n$ = "W3Q1L16 "
     scale$ = "o1fo1go1ao2co2do2fo2go2ao3co3do3fo3go3ao4co4do4fo"
     FOR y = 15 TO 0 STEP -1
         IF grid(cur, y) = 1 THEN
@@ -80,7 +77,6 @@ SUB playgrid
 END SUB
 
 SUB cleargrid
-    DIM x, y
     FOR y = 0 TO 15
         FOR x = 0 TO 15
             grid(x, y) = 0
