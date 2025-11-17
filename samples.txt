@@ -98,3 +98,5 @@
 "sin-cos-play2.bas", "SinCosPlay2", "Dav", "", "Graphics, Fun with Trig"
 "sin-cos-play3.bas", "SinCosPlay3", "Dav", "", "Graphics, Fun with Trig"
 "sin-cos-play4.bas", "SinCosPlay4", "Dav", "", "Graphics, Fun with Trig"
+"exploding-planet.bas", "Exploding Planet", "Dav", "Explodes a small planet on the screen, fading out screen", "Graphics"
+"reverse-explosion.bas", "Reverse Explosion", "Dav", "Reverse explodes an image onto the screen (Assemble it)", "Graphics"
