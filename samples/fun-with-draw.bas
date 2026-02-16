@@ -1,11 +1,9 @@
 ' Mod MG DRAW by bplus 2023-10-08
 'ref  https://qb64.boards.net/thread/219/qb64-dev-competition-idea?page=2&scrollTo=1228
-
 Dim i As Integer, ai As Integer, cc As Integer, u As Integer
 Dim a$, s$
-
 Randomize Timer
-Screen 13
+Screen _NewImage(800, 600, 12)
 Do
     a$ = ""
     Do Until Len(a$) > 20
@@ -24,7 +22,7 @@ Do
             cc = Rand(64, 160)
             If i > 10 Then u = 10 Else u = i
             If i Mod 2 Then cc = 9 Else cc = 15
-            PreSet (160, 100)
+            PReset (400, 300)
             'Draw "ta0"  ' this needed?
             a$ = "S" + Str$(22 - u * 2) + "TA" + Str$(ai) + "C" + Str$(cc) + s$
             Draw a$
@@ -33,7 +31,6 @@ Do
     Print "spacebar for another, esc to quit"
     Sleep
 Loop Until Asc(InKey$) = 27
-
 Function Rand& (fromval&, toval&)
     Dim sg%, f&, t&
     If fromval& = toval& Then
@@ -52,7 +49,6 @@ Function Rand& (fromval&, toval&)
     If f& > t& Then Swap f&, t&
     Rand& = Int(Rnd * (t& - f& + 1) + f&) * sg%
 End Function
-
 Function Random1& (maxvaluu&)
     Dim sg%
     sg% = Sgn(maxvaluu&)
