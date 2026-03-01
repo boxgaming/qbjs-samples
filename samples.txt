@@ -102,3 +102,4 @@
 "reverse-explosion.bas", "Reverse Explosion", "Dav", "Reverse explodes an image onto the screen (Assemble it)", "Graphics"
 "twirling-threads.bas", "Twirling Threads", "Dav", "", "Graphics, Fun with Trig"
 "morph-curve-line.bas", "Morph Curve Line", "bplus, ZXDunny", "", "Graphics, Fun with Trig"
+"atomic-heart.bas", "Atomic Heart", "DANILIN", "", "Graphics"
