@@ -103,3 +103,4 @@
 "twirling-threads.bas", "Twirling Threads", "Dav", "", "Graphics, Fun with Trig"
 "morph-curve-line.bas", "Morph Curve Line", "bplus, ZXDunny", "", "Graphics, Fun with Trig"
 "atomic-heart.bas", "Atomic Heart", "DANILIN", "", "Graphics"
+"print-cga.zip", "Print CGA", "Hevanafa", "Print characters from a custom bitmap font.", "Graphics"
