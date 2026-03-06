@@ -2,7 +2,7 @@
 'Dav, NOV/2025
 
 $If WEB Then
-    Screen NewImage(350, 350)
+    Screen NewImage(350, 350, 32)
 $Else
     Screen _NewImage(Int(_DesktopHeight * .75), Int(_DesktopHeight * .75), 32)
 $End If

@@ -18,8 +18,8 @@ Do
     If _Resize Then
         Dim tmp 
         tmp = fimage
-        Screen _NewImage(_ResizeWidth - 2, _ResizeHeight - 42)
-        fimage = _NewImage(_ResizeWidth - 2, _ResizeHeight - 42)
+        Screen _NewImage(_ResizeWidth - 2, _ResizeHeight - 42, 32)
+        fimage = _NewImage(_ResizeWidth - 2, _ResizeHeight - 42, 32)
         _PutImage (0, 0), tmp, fimage
     End If
 

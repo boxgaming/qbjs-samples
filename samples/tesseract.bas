@@ -29,7 +29,7 @@ x(14)=  1: y(14) =  1: z(14) =1: w(14) = 1
 x(15)=0-1: y(15) =  1: z(15) =1: w(15) = 1
 
 
-screen _newimage(sw, sh)
+screen _newimage(sw, sh, 32)
 
 do
 for t = 0 to 8*pi step 0.01

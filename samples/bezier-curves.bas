@@ -18,7 +18,7 @@ Do
     If _Resize Then
         Dim tmp 
         tmp = _CopyImage(0)
-        Screen _NewImage(_ResizeWidth - 5, _ResizeHeight - 5)
+        Screen _NewImage(_ResizeWidth - 5, _ResizeHeight - 5, 32)
         _PutImage (0, 0), tmp
         
     End If

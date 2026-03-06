@@ -10,7 +10,7 @@ y2 = -1.2
 dim w, h
 w = 800
 h = 600
-screen _newimage(w, h)
+screen _newimage(w, h, 32)
 
 dim redraw
 redraw = 1
@@ -21,7 +21,7 @@ do
 if _resize then
     w = _resizewidth - 20
     h = _resizeheight - 20
-    screen _newimage(w, h)
+    screen _newimage(w, h, 32)
     window screen(x1, y1)-(x2, y2)
     redraw = 1
 end if

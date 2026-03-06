@@ -1,11 +1,12 @@
 Import Gfx From "lib/graphics/2d.bas"
+Screen _NewImage(640, 400, 32)
 
 Dim f As Long
 f = _LoadFont("Arial, Helvetica, sans-serif", 60)
 _Font f
 
 Dim img As Long
-img = _NewImage(_PrintWidth("Hello World!"), _FontHeight)
+img = _NewImage(_PrintWidth("Hello World!"), _FontHeight, 32)
 _Dest img
 Color 15
 _PrintMode _KeepBackground

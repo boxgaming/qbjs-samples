@@ -66,7 +66,7 @@ Sub InitControls
     Dom.Create "br", c
     Dom.Create "br", c
     Dom.Create "div", c, "This is a second image:"
-    cimg = _NewImage(200, 100)
+    cimg = _NewImage(200, 100, 32)
     Dim dimg
     dimg = Dom.GetImage(cimg)
     dimg.style.border = "1px solid #ccc"

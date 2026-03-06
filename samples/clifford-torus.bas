@@ -7,7 +7,7 @@ d = 700
 z0 = 1500
 pi = 4*atn(1)
 
-screen _newimage(sw, sh)
+screen _newimage(sw, sh, 32)
 
 sv = 2*pi/30
 su = 2*pi/10

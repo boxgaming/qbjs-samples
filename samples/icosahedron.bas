@@ -21,7 +21,7 @@ zoom = 150
 dim shared sw, sh
 sw = 800
 sh = 600
-screen newimage(sw, sh) 
+screen newimage(sw, sh, 32) 
 
 
 zoom = sh/3
@@ -82,7 +82,7 @@ do
     if resize then
         sw = _resizewidth - 20
         sh = _resizeheight - 20
-        screen newimage(sw, sh) 
+        screen newimage(sw, sh, 32) 
     end if
     
     if not mousebutton(2) then
