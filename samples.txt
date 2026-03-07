@@ -106,3 +106,4 @@
 "print-cga.zip", "Print CGA", "Hevanafa", "Print characters from a custom bitmap font.", "Graphics"
 "klein-bottle.bas", "Klein Bottle", "vince", "Parametric geometry", "Graphics, 3D"
 "screen-mode-test.bas", "Screen Mode Test", "dbox", "Test program for screen mode compatibility", ""
+"santasteve.zip", "GX Santa Steve", "vince", "", "Games, GX"
