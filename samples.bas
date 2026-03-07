@@ -235,7 +235,7 @@ Sub MapAuthors (authors As String, li As Object)
     Dim ai As Integer
     For ai = 1 To UBound(aarray)
         Dim author As String
-        author = aarray(ai)
+        author = _Trim$(aarray(ai))
         
         Dim o As Object
         o = amap(author)
@@ -270,7 +270,7 @@ Sub MapCategories (categories As String, li As Object)
     Dim ci As Integer
     For ci = 1 To UBound(carray)
         Dim category As String
-        category = carray(ci)
+        category = _Trim$(carray(ci))
 
         Dim o As Object
         o = cmap(category)

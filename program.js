@@ -1,4 +1,3 @@
-async function __qbjs_run() {
 async function _Dom() {
 /* global constants: */ 
 /* shared variables: */ 
@@ -260,7 +259,7 @@ if (QB.halted()) { return; };
 /* implicit variables: */ 
    var i = 0;  /* SINGLE */ var part = '';  /* STRING */ 
    if ( jsArray) {
-      QB.resizeArray(result, [{l:0,u:jsArray.length}], '', false);  /* STRING */ 
+      QB.resizeArray(result, [{l:0,u: jsArray.length}], '', false);  /* STRING */ 
       var ___v5334240 = 0; ___l7055475: for ( i=  1 ;  i <=  jsArray.length;  i= i + 1) { if (QB.halted()) { return; } ___v5334240++;   if (___v5334240 % 100 == 0) { await QB.autoLimit(); }
          //-------- BEGIN JS native code block --------
                 part = jsArray[i-1];
@@ -268,7 +267,7 @@ if (QB.halted()) { return; };
          QB.arrayValue(result, [ i]).value =  part;
       } 
    } else {
-      QB.resizeArray(result, [{l:0,u:0}], '', false);  /* STRING */ 
+      QB.resizeArray(result, [{l:0,u: 0}], '', false);  /* STRING */ 
    }
 }
 async function func_Search(s/*STRING*/,regex/*STRING*/) {
@@ -346,7 +345,7 @@ QB.start(); QB.setTypeMap({ GXPOSITION:[{ name: 'x', type: 'LONG' }, { name: 'y'
 
 /* implicit variables: */ 
    QB.resizeArray(amap, [], {}, false);  /* OBJECT */ QB.resizeArray(cmap, [], {}, false);  /* OBJECT */ 
-   QB.resizeArray(alist, [{l:0,u:0}], '', false);  /* STRING */ QB.resizeArray(clist, [{l:0,u:0}], '', false);  /* STRING */ 
+   QB.resizeArray(alist, [{l:0,u: 0}], '', false);  /* STRING */ QB.resizeArray(clist, [{l:0,u: 0}], '', false);  /* STRING */ 
    lastSelected = '';  /* STRING */ baseImgUrl = '';  /* STRING */ 
    baseImgUrl = "/qbjs/";
    if ( document.location.pathname ==  "/"  ) {
@@ -565,12 +564,12 @@ if (QB.halted()) { return; }; visible = Math.round(visible);
 async function sub_MapAuthors(authors/*STRING*/,li/*OBJECT*/) {
 if (QB.halted()) { return; }; 
 /* implicit variables: */ 
-   var aarray = QB.initArray([{l:0,u:0}], '');  /* STRING */ 
+   var aarray = QB.initArray([{l:0,u: 0}], '');  /* STRING */ 
    await String.sub_Split(  authors,   ","  ,   aarray);
    var ai = 0;  /* INTEGER */ 
    var ___v8626193 = 0; ___l4140327: for ( ai=  1 ;  ai <= (QB.func_UBound(  aarray));  ai= ai + 1) { if (QB.halted()) { return; } ___v8626193++;   if (___v8626193 % 100 == 0) { await QB.autoLimit(); }
       var author = '';  /* STRING */ 
-      author = QB.arrayValue(aarray, [ ai]).value;
+      author = (QB.func__Trim( QB.arrayValue(aarray, [ ai]).value));
       var o = {};  /* OBJECT */ 
       o = QB.arrayValue(amap, [ author]).value;
       //-------- BEGIN JS native code block --------
@@ -589,7 +588,7 @@ if (QB.halted()) { return; };
       } 
       if (~ found) {
          i = (QB.func_UBound(  alist))  +  1;
-         QB.resizeArray(alist, [{l:0,u:i}], '', true);  /* STRING */ 
+         QB.resizeArray(alist, [{l:0,u: i}], '', true);  /* STRING */ 
          QB.arrayValue(alist, [ i]).value =  author;
       }
    } 
@@ -598,12 +597,12 @@ if (QB.halted()) { return; };
 async function sub_MapCategories(categories/*STRING*/,li/*OBJECT*/) {
 if (QB.halted()) { return; }; 
 /* implicit variables: */ 
-   var carray = QB.initArray([{l:0,u:0}], '');  /* STRING */ 
+   var carray = QB.initArray([{l:0,u: 0}], '');  /* STRING */ 
    await String.sub_Split(  categories,   ","  ,   carray);
    var ci = 0;  /* INTEGER */ 
    var ___v8714458 = 0; ___l9619532: for ( ci=  1 ;  ci <= (QB.func_UBound(  carray));  ci= ci + 1) { if (QB.halted()) { return; } ___v8714458++;   if (___v8714458 % 100 == 0) { await QB.autoLimit(); }
       var category = '';  /* STRING */ 
-      category = QB.arrayValue(carray, [ ci]).value;
+      category = (QB.func__Trim( QB.arrayValue(carray, [ ci]).value));
       var o = {};  /* OBJECT */ 
       o = QB.arrayValue(cmap, [ category]).value;
       //-------- BEGIN JS native code block --------
@@ -622,7 +621,7 @@ if (QB.halted()) { return; };
       } 
       if (~ found) {
          i = (QB.func_UBound(  clist))  +  1;
-         QB.resizeArray(clist, [{l:0,u:i}], '', true);  /* STRING */ 
+         QB.resizeArray(clist, [{l:0,u: i}], '', true);  /* STRING */ 
          QB.arrayValue(clist, [ i]).value =  category;
       }
    } 
@@ -681,6 +680,4 @@ if (QB.halted()) { return; };
    //-------- BEGIN JS native code block --------
     window.dispatchEvent(new Event("resize"));
 //-------- END JS native code block --------
-}
-
 }
