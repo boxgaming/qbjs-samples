@@ -22,7 +22,7 @@ Sub TestScreenMode (mode As Integer)
         trows = _Height \ _FontHeight
     End If
     Print "Screen"; mode
-    Print "────────────────────────"
+    Print "-------------------------------"
     Print "Width:       "; _Width
     Print "Height:      "; _Height
     Print "Text Columns:"; tcols
