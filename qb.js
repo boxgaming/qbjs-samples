@@ -1,4 +1,172 @@
 var QB = new function() {
+    // QB sound functionality
+    // original source: https://siderite.dev/blog/qbasic-play-in-javascript
+    class QBasicSound {
+
+        constructor() {
+            this.octave = 4;
+            this.noteLength = 4;
+            this.tempo = 120;
+            this.mode = 7 / 8;
+            this.foreground = true;
+            this.type = 'square';
+        }
+    
+        stop() {
+            if (this._audioContext && this._audioContext.state != "closed") {
+                this._audioContext.suspend();
+                this._audioContext.close();
+            }
+        }
+
+        setType(type) {
+            this.type = type;
+        }
+    
+        async playSound(frequency, duration) {
+            if (!this._audioContext) {
+                this._audioContext = new AudioContext();
+            }
+            // a 0 frequency means a pause
+            if (frequency == 0) {
+                await delay(duration);
+            } else {
+                const o = this._audioContext.createOscillator();
+                const g = this._audioContext.createGain();
+                o.connect(g);
+                g.connect(this._audioContext.destination);
+                g.gain.value = 0.25;
+                o.frequency.value = frequency;
+                o.type = this.type;
+                o.start();
+                const actualDuration = duration * this.mode;
+                const pause = duration - actualDuration;
+                await delay(actualDuration);
+                o.stop();
+                if (pause) { await delay(pause); }
+            }
+        }
+    
+        getNoteValue(octave, note) {
+            const octaveNotes = 'C D EF G A B';
+            const index = octaveNotes.indexOf(note.toUpperCase());
+            if (index < 0) {
+                throw new Error(note + ' is not a valid note');
+            }
+            return octave * 12 + index;
+        }
+
+        async play(commandString) {
+            commandString = commandString.replace(/ /g, "");
+            const reg = /(?<octave>O\d+)|(?<octaveUp>>)|(?<octaveDown><)|(?<note>[A-G][#+-]?\d*\.?[,]?)|(?<noteN>N\d+\.?)|(?<length>L\d+)|(?<legato>ML)|(?<normal>MN)|(?<staccato>MS)|(?<pause>P\d+\.?)|(?<tempo>T\d+)|(?<foreground>MF)|(?<background>MB)/gi;
+            let match = reg.exec(commandString);
+            let promise = Promise.resolve();
+            let nowait = false;
+            while (match) {
+                let noteValue = null;
+                let longerNote = false;
+                let temporaryLength = 0;
+                if (match.groups.octave) {
+                    this.octave = parseInt(match[0].substring(1));
+                }
+                if (match.groups.octaveUp) {
+                    this.octave++;
+                }
+                if (match.groups.octaveDown) {
+                    this.octave--;
+                }
+                if (match.groups.note) {
+                    const noteMatch = /(?<note>[A-G])(?<suffix>[#+-]?)(?<shorthand>\d*)(?<longerNote>\.?)(?<nowait>,?)/i.exec(match[0]);
+                    if (noteMatch.groups.longerNote) {
+                        longerNote = true;
+                    }
+                    if (noteMatch.groups.shorthand) {
+                        temporaryLength = parseInt(noteMatch.groups.shorthand);
+                    }
+                    if (noteMatch.groups.nowait) {
+                        nowait = true;
+                    }
+                    noteValue = this.getNoteValue(this.octave, noteMatch.groups.note);
+                    switch (noteMatch.groups.suffix) {
+                        case '#':
+                        case '+':
+                            noteValue++;
+                            break;
+                        case '-':
+                            noteValue--;
+                            break;
+                    }
+                }
+                if (match.groups.noteN) {
+                    const noteNMatch = /N(?<noteValue>\d+)(?<longerNote>\.?)/i.exec(match[0]);
+                    if (noteNMatch.groups.longerNote) {
+                        longerNote = true;
+                    }
+                    noteValue = parseInt(noteNMatch.groups.noteValue);
+                }
+                if (match.groups.length) {
+                    this.noteLength = parseInt(match[0].substring(1));
+                }
+                if (match.groups.legato) {
+                    this.mode = 1;
+                }
+                if (match.groups.normal) {
+                    this.mode = 7 / 8;
+                }
+                if (match.groups.staccato) {
+                    this.mode = 3 / 4;
+                }
+                if (match.groups.pause) {
+                    const pauseMatch = /P(?<length>\d+)(?<longerNote>\.?)/i.exec(match[0]);
+                    if (pauseMatch.groups.longerNote) {
+                        longerNote = true;
+                    }
+                    noteValue = 0;
+                    temporaryLength = parseInt(pauseMatch.groups.length);
+                }
+                if (match.groups.tempo) {
+                    this.tempo = parseInt(match[0].substring(1));
+                }
+                if (match.groups.foreground) {
+                    this.foreground = true;
+                }
+                if (match.groups.background) {
+                    this.foreground = false;
+                }
+    
+                if (noteValue !== null) {
+                   const noteDuration = (60000 * 4 / this.tempo);
+                    let duration = (temporaryLength
+                        ? noteDuration / temporaryLength
+                        : noteDuration / this.noteLength);
+                    if (longerNote) { duration *= 1.5; }
+                    const C6 = 1047;
+                    const freq = noteValue == 0
+                        ? 0
+                        : C6 * Math.pow(2, (noteValue - 48) / 12);
+                    if (nowait) {
+                        this.playSound(freq, duration);
+                        nowait = false;
+                    }
+                    else {
+                        await this.playSound(freq, duration);
+                    }
+                }
+                match = reg.exec(commandString);
+            }
+            if (this.foreground) {
+                await promise;
+            } else {
+                promise;
+            }
+        }
+    }
+    
+    function delay(duration) {
+        return new Promise(resolve => setTimeout(resolve, duration));
+    }
+
+
     // QB public constants
     this._KEEPBACKGROUND = 1;
     this._ONLYBACKGROUND = 2;
@@ -50,7 +218,7 @@ var QB = new function() {
     var _rndSeed;
     var _runningFlag = false;
     var _screenDiagInv;
-    var _screenMode;
+    var _screenText;
     var _sourceImage = 0;
     var _strokeDrawLength = null;
     var _strokeDrawAngle = null;
@@ -60,7 +228,10 @@ var QB = new function() {
     var _windowDef = [];
     var _fileHandles = {};
     var _typeMap = {};
-
+    var _ucharMap = {};
+    var _ccharMap = {};
+    var _player = null;
+    var _soundCtx = null;
     
     // Array handling methods
     // ----------------------------------------------------
@@ -138,12 +309,23 @@ var QB = new function() {
         return result;
     };
 
+    this.toBoolean = function(value) {
+        return value ? -1 : 0;
+    };
+
     // Process control methods
     // -------------------------------------------
     this.halt = function() {
         _haltedFlag = true;
         _runningFlag = false;
         _inputMode = false;
+        if (_player) {
+            _player.stop();
+        }
+        if (_soundCtx && _soundCtx.state != "closed") {
+            _soundCtx.suspend();
+            _soundCtx.close();
+        }
         GX.soundStopAll();
         toggleCursor(true);
     };
@@ -170,13 +352,15 @@ var QB = new function() {
         _runningFlag = true;
         _sourceImage = 0;
         _strokeLineThickness = 2;
+        _player = new QBasicSound();
+        _soundCtx = new AudioContext();
         // initialize the default fonts
         _nextFontId = 1000;
         _font = 16;
         _fonts = {};
-        _fonts[8] = { name: "dosvga", size: "16px", style: "", offset: 4, monospace: true };
-        _fonts[14] = { name: "dosvga", size: "16px", style: "", offset: 4, monospace: true };
-        _fonts[16] = { name: "dosvga", size: "16px", style: "", offset: 4, monospace: true };
+        _fonts[8] = { name: "dosvga8", size: "8px", style: "", offset: 1, monospace: true, height: 8, width: 8 };
+        _fonts[14] = { name: "dosvga", size: "16px", style: "", offset: 4, monospace: true, height: 14, width: 8 };
+        _fonts[16] = { name: "dosvga", size: "16px", style: "", offset: 4, monospace: true, height: 16, width: 8 };
         GX.vfsCwd(GX.vfs().rootDirectory());
         _fileHandles = {};
         _initColorTable();
@@ -207,6 +391,10 @@ var QB = new function() {
         return _images[imageId].canvas;
     };
 
+    this.getSound = function(soundId) {
+        return GX.getSound(soundId);
+    };
+
     this.defaultLineWidth = function(width) {
         if (width != undefined) {
             _strokeLineThickness = width;
@@ -235,53 +423,78 @@ var QB = new function() {
         }
     };
 
+    // Runtime Assertions
+    function _assertParam(param, arg) {
+        if (arg == undefined) { arg = 1; }
+        if (param == undefined) { throw new Error("Method argument " + arg + " is required"); }
+    }
+
+    function _assertNumber(param, arg) {
+        if (arg == undefined) { arg = 1; }
+        if (param && param.rgba && typeof param.rgba == "function") {
+            param = QB.func_Val(param);
+        }
+        if (isNaN(param)) { throw new Error("Number required for method argument " + arg); }
+        return param;
+    }
 
     // Extended QB64 Keywords
     // --------------------------------------------
 
     this.func__Acos = function(x) {
+        x = _assertNumber(x);
         return Math.acos(x);
     };
 
     this.func__Acosh = function(x) {
+        x = _assertNumber(x);
         return Math.acosh(x);
     };
 
     this.func__Arccot = function(x) {
+        x = _assertNumber(x);
         return 2 * Math.atan(1) - Math.atan(x);
     };
 
     this.func__Arccsc = function(x) {
+        x = _assertNumber(x);
         return Math.asin(1 / x);
     };
 
     this.func__Arcsec = function(x) {
+        x = _assertNumber(x);
         return Math.acos(1 / x);
     };
 
     this.func__Alpha = function(rgb, imageHandle) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).a;
     };
 
     this.func__Alpha32 = function(rgb) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).a;
     };
 
     this.func__Asin = function(x) {
+        x = _assertNumber(x);
         return Math.asin(x);
     };
 
     this.func__Asinh = function(x) {
+        x = _assertNumber(x);
         return Math.asinh(x);
     };
 
     this.func__Atanh = function(x) {
+        x = _assertNumber(x);
         return Math.atanh(x);
     };
 
     this.func__Atan2 = function(y, x) {
+        x = _assertNumber(x);
         return Math.atan2(y, x);
     };
 
@@ -295,11 +508,13 @@ var QB = new function() {
     };
 
     this.func__Blue = function(rgb, imageHandle) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).b;
     };
 
     this.func__Blue32 = function(rgb) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).b;
     };
@@ -309,14 +524,62 @@ var QB = new function() {
     };
 
     this.func__Ceil = function(x) {
+        x = _assertNumber(x);
         return Math.ceil(x);
     };
+
+    this.func__Clipboard = async function () {
+      var result = "";
+      await navigator.clipboard.readText().then((clipText) => (result = clipText));
+      return result;
+    };
+
+    this.sub__Clipboard = function (text) {
+        _assertParam(text);
+        navigator.clipboard.writeText(text);
+    }
+
+    this.func__ClipboardImage = async function () {
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          for (const type of item.types) {
+            if (type.startsWith("image/")) {
+              const blob = await item.getType(type);
+              var image = new Image();
+              var imgId = -1;
+              image.src = URL.createObjectURL(blob);
+              await image.decode();
+              imgId = QB.func__NewImage(image.width, image.height, 32);
+              var ctx = _images[imgId].ctx;
+              ctx.drawImage(image, 0, 0);
+              return imgId;
+            }
+          }
+        }
+      } catch (e) {
+        return -1;
+      }
+      return -1;
+    };
+
+    this.sub__ClipboardImage = async function (imageIdToCopy) {
+        imageIdToCopy = _assertNumber(imageIdToCopy);
+        if (!_images[imageIdToCopy]) {
+          throw new Error("Invalid image ID");
+          return;
+        }
+        await _images[imageIdToCopy].canvas.toBlob(function(blob) {
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        });
+    }
 
     this.func__CommandCount = function() {
         return 0;
     };
 
     this.func__CopyImage = function(srcImageId) {
+        srcImageId = _assertNumber(srcImageId);
         var srcCanvas = _images[srcImageId].canvas;
         var destImageId = QB.func__NewImage(srcCanvas.width, srcCanvas.height);
         var ctx = _images[destImageId].ctx;
@@ -326,22 +589,27 @@ var QB = new function() {
     };
 
     this.func__Cosh = function(x) {
+        x = _assertNumber(x);
         return Math.cosh(x);
     };
 
     this.func__Cot = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.tan(x);
     }
 
     this.func__Coth = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.tanh(x);
     };
 
     this.func__Csc = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.sin(x);
     };
 
     this.func__Csch = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.sinh(x);
     };
 
@@ -350,10 +618,12 @@ var QB = new function() {
     };
 
     this.func__D2R = function(x) {
+        x = _assertNumber(x);
         return x * Math.PI / 180;
     };
 
     this.func__D2G = function(x) {
+        x = _assertNumber(x);
         return (x * 10 / 9);
     };
 
@@ -364,11 +634,13 @@ var QB = new function() {
     };
 
     this.func__Deflate = function(src) {
+        _assertParam(src);
         var result = pako.deflate(src);//, { to: "string" });
         return String.fromCharCode.apply(String, result);
     };
 
     this.sub__Delay = async function(seconds) {
+        seconds = _assertNumber(seconds);
         await GX.sleep(seconds*1000);
     };
 
@@ -385,6 +657,7 @@ var QB = new function() {
     };
 
     this.sub__Dest = function(imageId) {
+        imageId = _assertNumber(imageId);
         _flushScreenCache(_images[_activeImage]);
         _activeImage = imageId;
     };
@@ -394,6 +667,7 @@ var QB = new function() {
     };
 
     this.func__DirExists = function(path) {
+        _assertParam(path);
         var vfs = GX.vfs();
         var dir = vfs.getNode(path, GX.vfsCwd());
         if (dir && dir.type == vfs.DIRECTORY) {
@@ -411,6 +685,7 @@ var QB = new function() {
     };
 
     this.sub__Echo = function(msg) {
+        _assertParam(msg);
         console.log(msg); 
     };
 
@@ -419,20 +694,28 @@ var QB = new function() {
         return 0;
     };
 
-    this.func__FileExists = function(path) {
+    this.func__FileExists = async function(path) {
+        _assertParam(path);
         var vfs = GX.vfs();
         var file = vfs.getNode(path, GX.vfsCwd());
         if (file && file.type == vfs.FILE) {
+            return -1;
+        }
+        // didn't find the file in the vfs, so try to download it
+        file = await _downloadFile(path);
+        if (file) {
             return -1;
         }
         return 0;
     };
 
     this.sub__Font = function(fnt) {
+        fnt = _assertNumber(fnt);
         _font = fnt;
         _locX = 0;
         _lastTextX = 0;
         _locY = 0;
+        _initScreenText();
     };
 
     this.func__Font = function() {
@@ -443,9 +726,6 @@ var QB = new function() {
         if (fnt == undefined) {
             fnt = _font;
         }
-        if (fnt < 1000) {
-            return 16;
-        }
         return _fonts[fnt].height;
     };
 
@@ -453,13 +733,22 @@ var QB = new function() {
         if (fnt == undefined) {
             fnt = _font;
         }
-        if (fnt < 1000) {
-            return 8;
-        }
         return _fonts[fnt].width;
     };
 
+    this.sub__FreeFont = function(fnt) {
+        if (fnt == _font) {
+            throw new Error("Can't free active font.");
+        }
+        if (fnt != undefined) {
+            _fonts[fnt] = undefined;
+        }
+    };
+
     this.sub__FreeImage = function(imageId) {
+        if (imageId == undefined) {
+            imageId = _activeImage;
+        }
         _images[imageId] = undefined;
     };
 
@@ -473,9 +762,8 @@ var QB = new function() {
         }
         else if (mode == QB.STRETCH || mode == QB.SQUAREPIXELS) {
             // TODO: not making any distinction at present
-            GX.fullScreen(true);
+            GX.fullScreen(true, smooth);
         }
-        // TODO: implement smooth option (maybe) - the canvas does smooth scaling by default
     }
 
     this.func__G2D = function(x) {
@@ -483,23 +771,26 @@ var QB = new function() {
     };
 
     this.func__G2R = function(x) {
+        x = _assertNumber(x);
         return (x * 9/10) * Math.PI/180;
     };
 
     this.func__Green = function(rgb, imageHandle) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).g;
     };
 
     this.func__Green32 = function(rgb) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).g;
     };
 
     this.func__Height = function(imageId) {
         if (imageId == undefined) { imageId = _activeImage; }
-        if (_images[imageId].charSizeMode) {
-            return _height(imageId) / this.func__FontWidth();
+        if (_images[imageId].mode == 0) {
+            return _height(imageId) / this.func__FontHeight();
         }
         return _height(imageId);
     };
@@ -510,28 +801,33 @@ var QB = new function() {
     }
 
     this.func__Hypot = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         return Math.hypot(x, y);
     };
 
     this.func__Inflate = function(src) {
+        _assertParam(src);
         var result = pako.inflate(GX.vfs().textToData(src), { to: "string" });
         return result;
     };
 
     this.func__InStrRev = function(arg1, arg2, arg3) {
-      var startIndex = +Infinity;
-      var strSource = "";
-      var strSearch = "";
-      if (arg3 != undefined) {
-          startIndex = arg1-1;
-          strSource = String(arg2);
-          strSearch = String(arg3);
-      }
-      else {
-          strSource = String(arg1);
-          strSearch = String(arg2);
-      }
-      return strSource.lastIndexOf(strSearch, startIndex)+1;
+        _assertParam(arg1, 1);
+        _assertParam(arg2, 2);
+        var startIndex = +Infinity;
+        var strSource = "";
+        var strSearch = "";
+        if (arg3 != undefined) {
+            startIndex = arg1-1;
+            strSource = String(arg2);
+            strSearch = String(arg3);
+        }
+        else {
+            strSource = String(arg1);
+            strSearch = String(arg2);
+        }
+        return strSource.lastIndexOf(strSearch, startIndex)+1;
     };
 
     this.sub__KeyClear = function(buffer) {
@@ -555,6 +851,7 @@ var QB = new function() {
     };
 
     this.sub__Limit = async function(fps) {
+        fps = _assertNumber(fps);
         _flushAllScreenCache();
         var frameMillis = 1000 / fps / 1.15;
         await GX.sleep(0);
@@ -574,6 +871,8 @@ var QB = new function() {
     };
 
     this.func__LoadFont = async function(name, size, opts) {
+        _assertParam(name, 1);
+        _assertParam(size, 2);
         if (!isNaN(size)) {
             size = size + "px";
         }
@@ -588,16 +887,27 @@ var QB = new function() {
             name = "Font-" + id;
             await _loadFont(name, url);
         }
-        else if (nameLower.endsWith(".ttf") || nameLower.endsWith(".otf") || nameLower.endsWith("woff") || nameLower.endsWith("woff2")) {
+        else {
             // attempt to load the font from the vfs
-            // TODO: what if it is a local URL?
             var vfs = GX.vfs();
             var f = vfs.getNode(name, GX.vfsCwd());
+            if (!f) {
+                // couldn't find the font in the vfs, let's try to load it as a relative URL
+                f = await _downloadFile(name);
+            }
             if (f && f.type == vfs.FILE) {
                 var url = await vfs.getDataURL(f);
                 name = "Font-" + id;
                 await _loadFont(name, url);
             }
+            // Throwing an error here is overzealous and breaks functionality.
+            // If the font name does not resolve to a file or URL we want to
+            // just attempt to treat it as a standard web font descriptor
+            // (e.g. "Arial, Helvetica, sans-serif")
+            // ---------------------------------------------------------------
+            // else {
+            //    throw new Error("File not found: [" + name + "]");
+            // }
         }
         
         _fonts[id] = { name: name, size: size, style: ""};
@@ -611,7 +921,7 @@ var QB = new function() {
             _fonts[id].offset = tm.fontBoundingBoxAscent - tm.actualBoundingBoxAscent;
         }
         else {
-            // sad, firefox does not support fontBoundingBox... so it will just not work as well
+            // some browsers may still not support fontBoundingBox... so it will just not work as well
             _fonts[id].height = tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent + 2;
             _fonts[id].offset = 0;
         }
@@ -621,7 +931,7 @@ var QB = new function() {
             _fonts[id].monospace = false;
         }
         else {
-            _fonts[id].width = tm.width + 1;
+            _fonts[id].width = tm.width;
             _fonts[id].monospace = true;
         }
         return id;
@@ -635,6 +945,7 @@ var QB = new function() {
 
 
     this.func__LoadImage = async function(url) {
+        _assertParam(url);
         var vfs = GX.vfs();
         var vfsCwd = GX.vfsCwd();
         var img = null;
@@ -710,6 +1021,7 @@ var QB = new function() {
     };
 
     this.func__MouseButton = function(button) {
+        button = _assertNumber(button);
         return GX.mouseButton(button);
     };
 
@@ -718,6 +1030,17 @@ var QB = new function() {
     };
     
     this.func__NewImage = function(iwidth, iheight, mode) {
+        if (mode == undefined) {
+            // default to the same mode as the active image (_Dest)
+            if (_images && _images[_activeImage] && _images[_activeImage].mode) {
+                mode = _images[_activeImage].mode;
+            }
+            else { 
+                mode = 0;
+            } 
+        }
+        iwidth = _assertNumber(iwidth, 1);
+        iheight = _assertNumber(iheight, 2);
         var canvas = document.createElement("canvas");
         canvas.id = "qb-canvas-" + _nextImageId;
         if (mode == 0) {
@@ -731,7 +1054,7 @@ var QB = new function() {
         ctx = canvas.getContext("2d");
         ctx.lineCap = "butt";
 
-        _images[_nextImageId] = { canvas: canvas, ctx: ctx, lastX: 0, lastY: 0, charSizeMode: (mode == 0), dirty: true };
+        _images[_nextImageId] = { canvas: canvas, ctx: ctx, lastX: 0, lastY: 0, mode: mode, dirty: true };
         var tmpId = _nextImageId;
         _nextImageId++;
         return tmpId;
@@ -788,7 +1111,6 @@ var QB = new function() {
     this.sub__PrintString = function(x, y, s) {
         var ctx = _images[_activeImage].ctx;
         _flushScreenCache(_images[_activeImage]);
-        ctx.beginPath();
         var f = _fonts[_font];
         ctx.font = f.size + " " + f.name;
         var tm = ctx.measureText(s);
@@ -812,7 +1134,8 @@ var QB = new function() {
     };
 
     this.func__PrintWidth = function(s) {
-        if (!s) { return 0; }
+        _assertParam(s);
+        //if (!s) { return 0; }
         var ctx = GX.ctx();
         var f = _fonts[_font];
         ctx.font = f.size + " " + f.name;
@@ -823,6 +1146,9 @@ var QB = new function() {
     this.func__Pi = function(m) {
         if (m == undefined) {
             m = 1;
+        }
+        else {
+            m = _assertNumber(m);
         }
         return Math.PI * m;
     }
@@ -906,11 +1232,15 @@ var QB = new function() {
         sourceImage.lastY = sy2 + sh;
 
         _flushScreenCache(_images[destImageId]);
+        destImage.ctx.imageSmoothingEnabled = smooth;
         destImage.ctx.drawImage(sourceImage.canvas, sx1, sy1, sw, sh, dx1, dy1, dw, dh);
     }
 
     function _rgb(r, g, b, a) {
         if (a == undefined) { a = 1; }
+        r = parseInt(r);
+        g = parseInt(g);
+        b = parseInt(b);
         return {
             r: r,
             g: g,
@@ -928,14 +1258,18 @@ var QB = new function() {
     }
 
     this.func__R2D = function(x) {
+        x = _assertNumber(x);
         return x*180/Math.PI;
     };
 
     this.func__R2G = function(x) {
+        x = _assertNumber(x);
         return (x*(9/10))*180/Math.PI;
     };
 
-    this.func__Readbit= function(x, y) {
+    this.func__Readbit = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         var mask = 1 << y;
         if ((x & mask) != 0) {
             return -1;
@@ -945,16 +1279,20 @@ var QB = new function() {
     };
 
     this.func__Red = function(rgb, imageHandle) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).r;
     };
 
     this.func__Red32 = function(rgb) {
+        _assertParam(rgb);
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).r;
     };
 
     this.func__Resetbit = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         var mask = 1 << y;
         return x & ~mask;
     };
@@ -986,8 +1324,12 @@ var QB = new function() {
     };
 
     this.func__RGBA = function(r, g, b, a) {
+        r = _assertNumber(r, 1);
         if (a == undefined) {
             a = 255;
+        }
+        else {
+            a = parseInt(a);
         }
         if (b == undefined && g != undefined) {
             a = g;
@@ -1004,6 +1346,7 @@ var QB = new function() {
     }
 
     this.func__Round = function(value) {
+        value = _assertNumber(value);
         if (value < 0) {
             return -Math.round(-value);
         } else {
@@ -1032,63 +1375,82 @@ var QB = new function() {
     };
 
     this.func__Sec = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.cos(x);
     };
 
     this.func__Sech = function(x) {
+        x = _assertNumber(x);
         return 1 / Math.cosh(x);
     };
 
     this.func__Setbit = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         var mask = 1 << y;
         return x | mask;
     };
 
     this.func__Shl = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         return x << y;
     };
 
     this.func__Shr = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         return x >>> y;
     };
 
     this.func__Sinh = function(x) {
+        x = _assertNumber(x);
         return Math.sinh(x);
     };
 
     this.func__Source = function() {
         return _sourceImage;
-    }
+    };
 
     this.sub__Source = function(imageId) {
+        imageId = _assertNumber(imageId);
         _sourceImage = imageId;
-    }
+    };
+
     this.sub__SndClose = function(sid) {
+        sid = _assertNumber(sid);
         GX.soundClose(sid);
     };
 
     this.func__SndOpen = function(filename) {
+        _assertParam(filename);
         return GX.soundLoad(filename);
     };
 
     this.sub__SndPlay = function(sid) {
+        sid = _assertNumber(sid);
         GX.soundPlay(sid);
     };
 
     this.sub__SndLoop = function(sid) {
+        sid = _assertNumber(sid);
         GX.soundRepeat(sid);
     };
 
     this.sub__SndPause = function(sid) {
+        sid = _assertNumber(sid);
         GX.soundPause(sid);
     };
 
     this.sub__SndStop = function(sid) {
+        sid = _assertNumber(sid);
         GX.soundStop(sid);
     };
 
     this.sub__SndVol = function(sid, v) {
-        GX.soundVolumne(sid, v);
+        sid = _assertNumber(sid, 1);
+        v = _assertNumber(v, 2);
+        GX.soundVolume(sid, v);
     };
 
     this.func__StartDir = function() {
@@ -1096,16 +1458,21 @@ var QB = new function() {
     }
 
     this.func__Strcmp = function(x, y) {
+        _assertParam(x, 1);
+        _assertParam(y, 2);
         return (( x == y ) ? 0 : (( x > y ) ? 1 : -1 ));
     };
 
     this.func__Stricmp = function(x, y) {
+        _assertParam(x, 1);
+        _assertParam(y, 2);
         var a = x.toLowerCase();
         var b = y.toLowerCase();
         return (( a == b ) ? 0 : (( a > b ) ? 1 : -1 ));
     };
 
     this.func__Tanh = function(x) {
+        _assertParam(x);
         return Math.tanh(x);
     };
 
@@ -1114,21 +1481,25 @@ var QB = new function() {
     };
 
     this.sub__Title = function(title) {
+        _assertParam(title);
         document.title = title;
     };
 
     this.func__Trim = function(value) {
+        _assertParam(value);
         return value.trim();
     };
 
     this.func__Togglebit = function(x, y) {
+        x = _assertNumber(x, 1);
+        y = _assertNumber(y, 2);
         var mask = 1 << y;
         return x ^ mask;
     };
 
     this.func__Width = function(imageId) {
         if (imageId == undefined) { imageId = _activeImage; }
-        if (_images[imageId].charSizeMode) {
+        if (_images[imageId].mode == 0) {
             return _width(imageId) / this.func__FontWidth();
         }
         return _width(imageId);
@@ -1143,28 +1514,36 @@ var QB = new function() {
     // QB45 Keywords
     // --------------------------------------------
     this.func_Abs = function(value) {
+        value = _assertNumber(value);
         return Math.abs(value);
     };
 
     this.func_Asc = function(value, pos) {
+        _assertParam(value);
         if (pos == undefined) {
             pos = 0;
         }
-        else { pos--; }
+        else {
+            pos = _assertNumber(pos, 2);
+            pos--; 
+        }
 
-        return String(value).charCodeAt(pos);
+        var c = String(value).charCodeAt(pos);
+        var uc = _ccharMap[c];
+        if (uc) { c = uc; }
+        return c;
     }
 
     this.func_Atn = function(value) {
+        value = _assertNumber(value);
         return Math.atan(value);
     };
 
     this.sub_Beep = function() {
-        var context = new AudioContext();
-        var oscillator = context.createOscillator();
+        var oscillator = _soundCtx.createOscillator();
         oscillator.type = "square";
         oscillator.frequency.value = 780;
-        oscillator.connect(context.destination);
+        oscillator.connect(_soundCtx.destination);
         oscillator.start(); 
         setTimeout(function () {
             oscillator.stop();
@@ -1172,6 +1551,7 @@ var QB = new function() {
     };
 
     this.sub_ChDir = function(path) {
+        _assertParam(path);
         var node = GX.vfs().getNode(path, GX.vfsCwd());
         if (node) {
             GX.vfsCwd(node);
@@ -1182,6 +1562,9 @@ var QB = new function() {
     };
 
     this.func_Chr = function(charCode) {
+        charCode = _assertNumber(charCode);
+        var uc = _ucharMap[charCode];
+        if (uc) { charCode = uc; }
         return String.fromCharCode(charCode);
     };
 
@@ -1209,13 +1592,8 @@ var QB = new function() {
         
         ctx = _images[_activeImage].ctx;
         _flushScreenCache(_images[_activeImage]);
-        ctx.beginPath();
         ctx.clearRect(0, 0, _width(), _height());
-        //if (_screenMode == 1) { TODO: Finish implementing this.
         ctx.fillStyle = color.rgba();
-        //} else {
-        //    ctx.fillStyle = color.rgba();
-        //}
         ctx.fillRect(0, 0, _width(), _height());
 
         // reset the text position
@@ -1242,12 +1620,12 @@ var QB = new function() {
         return _rgb(0,0,0);
     }
 
-    this.sub_Color = function(x, y) {
-        if (x != undefined) {
-            _fgColor = _color(x);
+    this.sub_Color = function(fg, bg) {
+        if (fg != undefined) {
+            _fgColor = _color(fg);
         }
-        if (y != undefined) {
-            _bgColor = _color(y);
+        if (bg != undefined) {
+            _bgColor = _color(bg);
         }
     };
 
@@ -1256,6 +1634,7 @@ var QB = new function() {
     };
     
     this.func_Cos = function(value) {
+        value = _assertNumber(value);
         return Math.cos(value);
     };
 
@@ -1264,6 +1643,7 @@ var QB = new function() {
     };
 
     this.func_Cvi = function(numString) {
+        _assertParam(numString);
         var result = 0;
         numString = numString.split("").reverse().join("");
         for (let i=1;i>=0;i--) {
@@ -1273,6 +1653,7 @@ var QB = new function() {
     };
 
     this.func_Cvl = function(numString) {
+        _assertParam(numString);
         var result = 0;
         numString = numString.split("").reverse().join("");
         for (let i=3;i>=0;i--) {
@@ -1290,7 +1671,7 @@ var QB = new function() {
     };
 
     this.sub_Draw = function(t) {
-        
+        _assertParam(t);
         // Turn input string into array of characters.
         var u = t.toString();
         u = u.replace(/\s+/g, '');
@@ -1604,14 +1985,17 @@ var QB = new function() {
     };
 
     this.sub_Error = function(errorNumber) {
+        errorNumber = _assertNumber(errorNumber);
         throw new Error("Unhandled Error #" + errorNumber);
     };
 
     this.func_Exp = function(value) {
+        value = _assertNumber(value);
         return Math.exp(value);
     };
 
     this.func_Fix = function(value) {
+        value = _assertNumber(value);
         if (value >=0) {
             return Math.floor(value);
         }
@@ -1632,6 +2016,7 @@ var QB = new function() {
     }
 
     this.func_Hex = function(n) {
+        n = _assertNumber(n);
         return n.toString(16).toUpperCase();
     };
 
@@ -1665,8 +2050,8 @@ var QB = new function() {
 
     function toggleCursor(off) {
         if (!off || off != _inputCursor) {
+            if (!_images[_activeImage]) { return; }
             var ctx = _images[_activeImage].ctx;
-            ctx.beginPath();
             ctx.globalCompositeOperation="difference";
             ctx.fillStyle = "white";
             var w = QB.func__FontWidth();
@@ -1674,9 +2059,7 @@ var QB = new function() {
                 var tm = ctx.measureText("A");
                 w = tm.width;
             }
-            ctx.rect(_lastTextX, (_locY + 1) * QB.func__FontHeight() - 2, w, 2);
-            
-            ctx.fill();
+            ctx.fillRect(_lastTextX, (_locY + 1) * QB.func__FontHeight() - 2, w, 2);
             ctx.globalCompositeOperation = "source-over";
             _inputCursor = !_inputCursor;
         }
@@ -1801,6 +2184,8 @@ var QB = new function() {
     }
 
     this.func_InStr = function(arg1, arg2, arg3) {
+        _assertParam(arg1, 1);
+        _assertParam(arg2, 2);
         var startIndex = 0;
         var strSource = "";
         var strSearch = "";
@@ -1817,18 +2202,23 @@ var QB = new function() {
     };
 
     this.func_Int = function(value) {
+        value = _assertNumber(value);
         return Math.floor(value);
     };
 
     this.func_LCase = function(value) {
+        _assertParam(value);
         return String(value).toLowerCase();
     };
 
     this.func_Left = function(value, n) {
+        _assertParam(value, 1);
+        n = _assertNumber(n, 2);
         return String(value).substring(0, n);
     };
 
     this.func_Len = function(value) {
+        _assertParam(value);
         return String(value).length;
     };
 
@@ -1841,10 +2231,12 @@ var QB = new function() {
     };
 
     this.func_Log = function(value) {
+        value = _assertNumber(value);
         return Math.log(value);
     };
 
     this.func_Cdbl = function(value) {
+        value = _assertNumber(value);
         const buffer = new ArrayBuffer(16);
         const view = new DataView(buffer);
         view.setFloat32(1, value);
@@ -1852,19 +2244,16 @@ var QB = new function() {
     };
 
     this.func_Cint = function(value) {
-        if (value > 0) {
-            return Math.round(value);
-        } else {
-            return -Math.round(-value);
-        }
+        value = _assertNumber(value);
+        var s = (value < 0) ? -1 : 1;
+        var x = value * s;
+        var r = Math.round(x);
+        return (Math.abs(x) % 1 === .5 ? r - (r % 2) : r) * s;
     };
 
     this.func_Clng = function(value) {
-        if (value > 0) {
-            return Math.round(value);
-        } else {
-            return -Math.round(-value);
-        }
+        value = _assertNumber(value);
+        return this.func_Cint(value);
     };
 
     this.func_Csng = function(value) {
@@ -2001,12 +2390,10 @@ var QB = new function() {
 
             if (style == "B") {
                 ctx.strokeStyle = color.rgba();
-                ctx.beginPath();
                 ctx.strokeRect(sx, sy, width, height);
             } 
             else if (style == "BF") {
                 ctx.fillStyle = color.rgba();
-                ctx.beginPath();
                 ctx.fillRect(sx, sy, width, height);
             } 
             else {
@@ -2018,7 +2405,6 @@ var QB = new function() {
             }
         } else { // Stylized line.
             ctx.fillStyle = color.rgba();
-            ctx.beginPath();
             if (style == "B") {
                 lineStyle(sx, sy, ex, sy, value);
                 lineStyle(ex, sy, ex, ey, value);
@@ -2098,7 +2484,9 @@ var QB = new function() {
     };
 
     this.sub_Locate = function(row, col) {
-        // TODO: implement cursor positioning/display
+        // TODO: implement cursor positioning/display parameters
+        if (row == undefined) { row = 1; } else { row = _assertNumber(row); row = parseInt(row); }
+        if (col == undefined) { col = 1; } else { col = _assertNumber(col); col = parseInt(col); }
         if (row && row > 0 && row <= _textRows()) {
             _locY = row-1;
         }
@@ -2109,23 +2497,41 @@ var QB = new function() {
     };
 
     this.func_LTrim = function(value) {
+        _assertParam(value);
         return String(value).trimStart();
     };
 
     this.sub_Kill = function(path) {
+        _assertParam(path);
         GX.vfs().removeFile(path, GX.vfsCwd());
     };
 
     this.func_Mid = function(value, n, len) {
-      if (len == undefined) {
-         return String(value).substring(n-1);
-      }
-      else {
-        return String(value).substring(n-1, n+len-1);
-      }
+        _assertParam(value, 1);
+        n = _assertNumber(n, 2);
+        if (len == undefined) {
+            return String(value).substring(n-1);
+        }
+        else {
+            return String(value).substring(n-1, n+len-1);
+        }
     };
 
+    this.sub_Mid = function(value, n, len, newValue) {
+        _assertParam(value, 1);
+        n = _assertNumber(n, 2);
+        _assertParam(newValue, 4);
+        if (len == undefined) {
+            len = String(value).length - n + 1;
+        }
+        if (n + len > String(value).length) len = String(value).length - n + 1;
+        var str = String(value);
+        var newStr = str.substring(0, n-1) + String(newValue).substring(0,len) + str.substring(n-1+len);
+        return newStr;
+    }
+
     this.sub_MkDir = function(path) {
+        _assertParam(path);
         var vfs = GX.vfs();
         var vfsCwd = GX.vfsCwd();
         var parent = vfs.getParentPath(path);
@@ -2136,6 +2542,7 @@ var QB = new function() {
     }
 
     this.func_Mki = function(num) {
+        num = _assertNumber(num);
         var ascii = "";
         for (var i=1; i >= 0; i--) {
             ascii += String.fromCharCode((num>>(8*i))&255);
@@ -2144,6 +2551,7 @@ var QB = new function() {
     };
 
     this.func_Mkl = function(num) {
+        num = _assertNumber(num);
         var ascii = "";
         for (var i=3; i >= 0; i--) {
             ascii += String.fromCharCode((num>>(8*i))&255);
@@ -2152,6 +2560,8 @@ var QB = new function() {
     };
 
     this.sub_Name = function(oldName, newName) {
+        _assertParam(oldName, 1);
+        _assertParam(newName, 2);
         var vfs = GX.vfs();
         var vfsCwd = GX.vfsCwd();
         var node = vfs.getNode(oldName, vfsCwd);
@@ -2159,6 +2569,7 @@ var QB = new function() {
     };
 
     this.func_Oct = function(n) {
+        n = _assertNumber(n);
         return n.toString(8).toUpperCase();
     };
 
@@ -2176,7 +2587,7 @@ var QB = new function() {
             }
             if (!file) {
                 if (mode == QB.APPEND || mode == QB.BINARY) {
-                    file = await downloadFile(path);
+                    file = await _downloadFile(path);
                 }
                 if (!file) {
                     file = vfs.createFile(filename, parentNode);
@@ -2192,7 +2603,7 @@ var QB = new function() {
             var file = vfs.getNode(path, vfsCwd);
             if (!file) {
                 // attempt to copy the path to the local filesystem
-                var file = await downloadFile(path);
+                var file = await _downloadFile(path);
                 if (!file) {
                     throw new Error("File not found");
                 }
@@ -2206,35 +2617,38 @@ var QB = new function() {
             throw new Error("Unsupported Open Method");
         }
 
-        async function downloadFile(path) {
-            try {
-                var res = await fetch(path);
-                if (res.ok) {
-                    var filename = vfs.getFileName(path);
-                    var parentPath = vfs.getParentPath(path);
-                
-                    var parentNode = vfs.rootDirectory();
-                    var dirs = parentPath.split("/");
-                    for (var i=0; i < dirs.length; i++) {
-                        if (dirs[i] == "") { continue; }
-                        var node = vfs.getNode(dirs[i], parentNode);
-                        if (!node) { node = vfs.createDirectory(dirs[i], parentNode); }
-                        parentNode = node;
-                    }
-                
-                    var file = vfs.createFile(filename, parentNode);
-                    vfs.writeData(file, await res.arrayBuffer());
-                    return file;
+    };
+
+    async function _downloadFile(path) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        try {
+            var res = await fetch(path);
+            if (res.ok) {
+                var filename = vfs.getFileName(path);
+                var parentPath = vfs.getParentPath(path);
+
+                var parentNode = vfs.rootDirectory();
+                var dirs = parentPath.split("/");
+                for (var i=0; i < dirs.length; i++) {
+                    if (dirs[i] == "") { continue; }
+                    var node = vfs.getNode(dirs[i], parentNode);
+                    if (!node) { node = vfs.createDirectory(dirs[i], parentNode); }
+                    parentNode = node;
                 }
-                else {
-                    return null;
-                }
+            
+                var file = vfs.createFile(filename, parentNode);
+                vfs.writeData(file, await res.arrayBuffer());
+                return file;
             }
-            catch (err) {
+            else {
                 return null;
             }
         }
-    };
+        catch (err) {
+            return null;
+        }
+    }
 
     this.sub_Paint = function(sstep, startX, startY, fillColor, borderColor) {
         // See: http://www.williammalone.com/articles/html5-canvas-javascript-paint-bucket-tool/
@@ -2243,7 +2657,6 @@ var QB = new function() {
         var screen = _images[_activeImage];
         var ctx = screen.ctx;
         var data = ctx.getImageData(0, 0, screen.canvas.width, screen.canvas.height).data;
-        ctx.beginPath();
 
         var x0 = startX;
         var y0 = startY;
@@ -2321,6 +2734,10 @@ var QB = new function() {
         return true;
     }
 
+    this.sub_Play = async function(cmdstr) {
+        await _player.play(cmdstr);
+    };
+
     this.func_Point = function(x, y) {
         var screen = _images[_sourceImage];
         var ret = 0;
@@ -2352,7 +2769,7 @@ var QB = new function() {
             ret = _rgb(screen.imgdata.data[pixelIndex], 
                        screen.imgdata.data[pixelIndex + 1], 
                        screen.imgdata.data[pixelIndex + 2], 
-                       screen.imgdata.data[pixelIndex + 3]);
+                       screen.imgdata.data[pixelIndex + 3]/255);
         }
         return ret;
     };
@@ -2463,10 +2880,10 @@ var QB = new function() {
                     if (str >= 0) {
                         str = " " + str;
                     }
+                    str = str + " "; //a space is added to the end numbers when printing
                 }
                 var lines = String(str).split("\n");
                 for (var i=0; i < lines.length; i++) {
-                    ctx.beginPath();
                     var f = _fonts[_font];
                     ctx.font = f.size + " " + f.name;
 
@@ -2497,6 +2914,7 @@ var QB = new function() {
                         if (_printMode != QB._ONLYBACKGROUND) {
                             ctx.fillStyle = _fgColor.rgba();
                             ctx.fillText(subline, x, (y + QB.func__FontHeight() - f.offset));
+                            _setScreenText(subline);
                         }
                         x += tm.width;
 
@@ -2535,7 +2953,7 @@ var QB = new function() {
         // TODO: could be optimized for fixed width fonts which would not require measureText
         var lines = [];
         var tm = ctx.measureText(line);
-        if (tm.width < QB.func__Width() - startX) {
+        if (tm.width < _width() - startX) {
             lines.push(line);
             return lines;
         }
@@ -2544,7 +2962,7 @@ var QB = new function() {
         for (var i=0; i < line.length; i++) {
             var s = line.substring(start, end);
             tm = ctx.measureText(s);
-            if (tm.width > QB.func__Width() - startX) {
+            if (tm.width > _width() - startX) {
                 lines.push(line.substring(start, end-1));
                 start = end - 1;
                 startX = 0;
@@ -2563,6 +2981,7 @@ var QB = new function() {
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(ctx.canvas, 0, -QB.func__FontHeight(), ctx.canvas.width, ctx.canvas.height);
         ctx.globalCompositeOperation = "source-over";
+        _scrollScreenText();
     }
 
     this.sub_PSet = function(sstep, x, y, color) {
@@ -2888,10 +3307,15 @@ var QB = new function() {
             _readCursorPosition = 0;
         } else {
             _readCursorPosition = _dataLabelMap[t];
+            if (_readCursorPosition == undefined) {
+                throw new Error("Label '" + t + "' not defined");
+            }
         }
     };
 
     this.func_Right = function(value, n) {
+        _assertParam(value, 1);
+        n = _assertNumber(n, 2);
         if (value == undefined) {
             return "";
         }
@@ -2900,6 +3324,7 @@ var QB = new function() {
     };
 
     this.func_RTrim = function(value) {
+        _assertParam(value);
         return String(value).trimEnd();
     }
 
@@ -2925,6 +3350,7 @@ var QB = new function() {
     };
 
     this.sub_RmDir = function(path) {
+        _assertParam(path);
         vfs.removeDirectory(path, vfsCwd);
     };
 
@@ -2943,9 +3369,8 @@ var QB = new function() {
         return _rndSeed / 0x1000000;
     };
 
-    this.sub_Screen = async function(mode) {
+    this.sub_Screen = function(mode) {
         _activeImage = 0;
-        charSizeMode = false;
 
         if (_currScreenImage) {
             _images[_currScreenImage.id] = _currScreenImage;
@@ -2953,47 +3378,49 @@ var QB = new function() {
             _currScreenImage = null;
         }
 
+        var screenMode = mode;
+        _font = _screenModeFont(screenMode);
         if (mode == 0) {
-            GX.sceneCreate(640, 400);
+            GX.sceneCreate(640, 400, true);
         }
-        else if (mode == 1) {
-            GX.sceneCreate(320, 200);
+        else if (mode == 1 || mode == 7 || mode == 13) {
+            GX.sceneCreate(320, 200, true);
         }
-        else if (mode == 2 || mode == 7 || mode == 13) {
-            GX.sceneCreate(320, 200);
-        }
-        else if (mode == 8) {
-            GX.sceneCreate(640, 200);
+        else if (mode == 2 || mode == 8) {
+            GX.sceneCreate(640, 200, true);
         }
         else if (mode == 9 || mode == 10) {
-            GX.sceneCreate(640, 350);
+            GX.sceneCreate(640, 350, true);
         }
         else if (mode == 11 || mode == 12) {
-            GX.sceneCreate(640, 480);
-        }
-        else if (mode == 13) {
-            GX.sceneCreate(320, 200);
+            GX.sceneCreate(640, 480, true);
         }
         else if (mode >= 1000) {
             var img = _images[mode];
+            screenMode = img.mode;
+            _font = _screenModeFont(screenMode);
             if (img && img.canvas) {
-                GX.sceneCreate(img.canvas.width, img.canvas.height);
+                GX.sceneCreate(img.canvas.width, img.canvas.height, true);
                 this.sub__PutImage(undefined, undefined, undefined, undefined, undefined, undefined, mode);
-                charSizeMode = img.charSizeMode;
                 _currScreenImage = _images[mode];
                 _currScreenImage.id = mode;
                 _images[mode] = _images[0];
+                _images[mode].mode = screenMode;
             }
         }
+        else {
+            throw new Error("Invalid screen mode");
+        }
+
         _images[0] = { canvas: GX.canvas(), ctx: GX.ctx(), lastX: 0, lastY: 0 };
         _images[0].lastX = _images[0].canvas.width/2;
         _images[0].lastY = _images[0].canvas.height/2;
         _images[0].canvas.style.cursor = "default";
+        _images[0].mode = screenMode;
 
         _screenDiagInv = 1/Math.sqrt(_images[0].canvas.width*_images[0].canvas.width + _images[0].canvas.height*_images[0].canvas.height);
         
         // initialize the graphics
-        _screenMode = mode;
         if (mode < 2) {
             _fgColor = _color(7); 
         }
@@ -3016,8 +3443,112 @@ var QB = new function() {
         _keyHitBuffer = [];
         _keyDownMap = {};
 
+        _initScreenText();
+        
         // TODO: set the appropriate default font for the selected screen mode above instead of here
     };
+
+    function _screenModeFont(mode)
+    {
+        var font = 16;
+        if (mode == 1 || mode == 2 || mode == 7 || mode == 8 || mode == 13) {
+            font = 8;
+        }
+        else if (mode == 9 || mode == 10) {
+            font = 14;
+        }
+        return font;
+    }
+
+    this.func_Screen = function(row, col, colorflag) {
+        if (colorflag) {
+            return _getScreenColor(row-1, col-1);
+        }
+        else {
+            var s = _getScreenText(row-1, col-1);
+            s = QB.convertTo437(s);
+            return s.charCodeAt(0);
+        }
+    };
+    
+    function _initScreenText()
+    {
+        _screenText = [];
+
+        var fw = QB.func__FontWidth();
+        if (fw > 0) {
+            var fh = QB.func__FontHeight();
+            for (var i=0; i < Math.floor(_height()/fh); i++)
+            {
+                var col = [];
+                for (var j=0; j < Math.floor(_width()/fw); j++) {
+                    col.push({ text: " " });
+                }
+                _screenText.push(col);
+            }
+        }
+    }
+
+    function _scrollScreenText() {
+        for (var i=1; i < _screenText.length; i++) {
+            _screenText[i-1] = _screenText[i];
+        }
+        var col = [];
+        for (var j=0; j < Math.floor(_width()/QB.func__FontWidth()); j++) {
+            col.push({ text: " " });
+        }
+        _screenText[_screenText.length-1] = col;
+    }
+
+    function _setScreenText(text) {
+        var row = _locY;
+        var col = _locX; 
+        if (_screenText.length < 1 || row >= _screenText.length) { return; }
+        for (var i=0; i < text.length; i++) {
+            if (_screenText.length > row && _screenText[row] && _screenText[row].length > col+i) {
+                _screenText[row][col+i].text = text.substring(i, i+1);
+                _screenText[row][col+i].fgcolor = _fgColor;
+                _screenText[row][col+i].bgcolor = _bgColor;
+            }
+        }
+    }
+
+    function _getScreenColor(row, col) {
+        var rdata = _screenText[row];
+        if (!rdata) { return 0; }
+        var cdata = rdata[col];
+        if (!cdata) { return 0; }
+        var c = cdata.fgcolor;
+        if (!c) { return 0; }
+        c = _lookupIndexedColor(c);
+        if (!isNaN(c)) {
+            if (c < 16) {
+                var bg = _lookupIndexedColor(cdata.bgcolor);
+                if (!isNaN(bg) && bg > 0 && bg <= 7) {
+                    c += bg*16;
+                }
+            }
+        }
+        return c;
+    }
+
+    function _lookupIndexedColor(c) {
+        for (var i=0; i < _colormap.length; i++) {
+            var cm = _colormap[i];
+            if (cm.r == c.r && cm.g == c.g && cm.b == c.b && cm.a == c.a) {
+                return i;
+            }
+        }
+        return c;
+    }
+
+    function _getScreenText(row, col) {
+        var rdata = _screenText[row];
+        if (!rdata) { return " "; }
+        var cdata = rdata[col];
+        if (!cdata || !cdata.text) { return " "; }
+        return cdata.text;
+    }
 
     this.func_Seek = function(fh) {
         if (!_fileHandles[fh]) {
@@ -3036,16 +3567,20 @@ var QB = new function() {
     };
 
     this.func_Sgn = function(value) {
+        value = _assertNumber(value);
         if (value > 0) { return 1; }
         else if (value < 0) { return -1; }
         else { return 0; }
     };
 
     this.func_Space = function(ccount) {
+        ccount = _assertNumber(ccount);
         return QB.func_String(ccount, " ");
     }
 
     this.func_String = function(ccount, s) {
+        ccount = _assertNumber(ccount, 1);
+        _assertParam(s, 2);
         if (typeof s === "string") {
             s = s.substring(0, 1);
         }
@@ -3056,6 +3591,7 @@ var QB = new function() {
     };
 
     this.func_Sin = function(value) {
+        value = _assertNumber(value);
         return Math.sin(value);
     };
 
@@ -3063,7 +3599,10 @@ var QB = new function() {
         var elapsed = 0;
         var totalWait = Infinity;
         if (seconds != undefined) {
-            totalWait = seconds*1000;
+            seconds = _assertNumber(seconds);
+            if (seconds > 0) {
+                totalWait = seconds*1000;
+            }
         }
         
         _lastKey = null;
@@ -3076,6 +3615,10 @@ var QB = new function() {
 
 
     this.sub_Sound = async function(freq, duration, shape, decay, gain) {
+        freq = _assertNumber(freq, 1);
+        duration = _assertNumber(duration, 2);
+        // convert duration to milliseconds
+        duration = duration * 1000 / 18;
         if (shape == undefined || (typeof shape != 'string')) { shape = "square"; }
         if (decay == undefined || (typeof decay != 'number')) { decay = 0.0; }
         if (gain  == undefined || (typeof gain != 'number')) { gain = 1.0; }
@@ -3089,27 +3632,31 @@ var QB = new function() {
         if (freq == 0) {
             await GX.sleep(duration);
         } else {
-            var context = new AudioContext();
-            var oscillator = context.createOscillator();
-            var gainNode = context.createGain();
+            var oscillator = _soundCtx.createOscillator();
+            var gainNode = _soundCtx.createGain();
             oscillator.type = shape;
             oscillator.frequency.value = freq;
             oscillator.connect(gainNode);
-            gainNode.connect(context.destination)
+            gainNode.connect(_soundCtx.destination)
             gainNode.gain.value = gain;
             oscillator.start(); 
             setTimeout(await async function () {
-                gainNode.gain.setTargetAtTime(0, context.currentTime, decay);
+                gainNode.gain.setTargetAtTime(0, _soundCtx.currentTime, decay);
                 oscillator.stop(duration + decay + 1);
             }, duration);  
+            await GX.sleep(duration*2/3);
         }
     };
 
     this.func_Sqr = function(value) {
+        value = _assertNumber(value);
         return Math.sqrt(value);
     };
 
     this.func_Str = function(value) {
+        if (!isNaN(value) && value >= 0) {
+            return " " + value;
+        }
         return String(value);
     };
 
@@ -3120,6 +3667,7 @@ var QB = new function() {
     };
 
     this.func_Tan = function(value) {
+        value = __assertNumber(value);
         return Math.tan(value);
     };
 
@@ -3140,26 +3688,37 @@ var QB = new function() {
     };
 
     this.func_LBound = function(a, dimension) {
+        _assertParam(a);
         if (dimension == undefined) {
             dimension = 1;
+        }
+        else {
+            dimension = _assertNumber(dimension, 2);
         }
         return a._dimensions[dimension-1].l;
     };
 
     this.func_UBound = function(a, dimension) {
+        _assertParam(a);
         if (dimension == undefined) {
             dimension = 1;
+        }
+        else {
+            dimension = _assertNumber(dimension, 2);
         }
         return a._dimensions[dimension-1].u;
     };
 
     this.func_UCase = function(value) {
+        _assertParam(value);
         return String(value).toUpperCase();
     };
 
     this.func_Val = function(value) {
+        _assertParam(value);
         var ret;
         value = value.toString();
+        value = value.replaceAll(/\s/g, "");
         if (value.substring(0, 2) == "&H") {
             ret = parseInt(value.slice(2), 16);
         } else if (value.substring(0, 2) == "&O") {
@@ -3169,6 +3728,7 @@ var QB = new function() {
         } else {
             ret = Number(value);
         }
+        if (isNaN(ret)) { ret = 0; }
         return ret;
     };
 
@@ -3394,8 +3954,8 @@ var QB = new function() {
         _inkeymap['Backspace'] = {n:[8],s:[8],c:[0,147],a:[0,14]};
         _inkeymap['Tab'] = {n:[9],s:[0,15]};
         _inkeymap['Enter'] = {n:[13],s:[13],c:[10]};
-        _inkeymap['Escape'] = {n:[0,27],s:[0,27]};
-        _inkeymap['Space'] = {n:[0,32],s:[0,32],c:[0,32]};
+        _inkeymap['Escape'] = {n:[27],s:[27]};
+        _inkeymap['Space'] = {n:[32],s:[32],c:[32]};
         _inkeymap['PageUp'] = {n:[0,73],s:[0,73],c:[0,132],a:[0,153]};
         _inkeymap['PageDown'] = {n:[0,81],s:[0,81],c:[0,118],a:[0,161]};
         _inkeymap['End'] = {n:[0,79],s:[0,79],c:[0,117],a:[0,159]};
@@ -3845,16 +4405,209 @@ var QB = new function() {
         _colormap[255] = _rgb(0, 0, 0);
     }
 
+    function _initCharMap() {
+        _mapChar(1, 0x263a);
+        _mapChar(2, 0x263b);
+        _mapChar(3, 0x2665);
+        _mapChar(4, 0x2666);
+        _mapChar(5, 0x2663);
+        _mapChar(6, 0x2660);
+        _mapChar(7, 0x2022);
+        _mapChar(8, 0x25D8);
+        _mapChar(9, 0x25CB);
+        //_mapChar(10, 0x25D9);
+        _mapChar(11, 0x2642);
+        _mapChar(12, 0x2640);
+        _mapChar(13, 0x266A);
+        _mapChar(14, 0x266B);
+        _mapChar(15, 0x263C);
+        _mapChar(16, 0x25BA);
+        _mapChar(17, 0x25C4);
+        _mapChar(18, 0x2195);
+        _mapChar(19, 0x203C);
+        _mapChar(20, 0x00B6);
+        _mapChar(21, 0x00A7);
+        _mapChar(22, 0x25AC);
+        _mapChar(23, 0x21A8);
+        _mapChar(24, 0x2191);
+        _mapChar(25, 0x2193);
+        _mapChar(26, 0x2192);
+        _mapChar(27, 0x2190);
+        _mapChar(28, 0x221F);
+        _mapChar(29, 0x2194);
+        _mapChar(30, 0x25B2);
+        _mapChar(31, 0x25BC);
+        _mapChar(127, 0x2302);
+        _mapChar(128, 0x00C7);
+        _mapChar(129, 0x00FC);
+        _mapChar(130, 0x00E9);
+        _mapChar(131, 0x00E2);
+        _mapChar(132, 0x00E4);
+        _mapChar(133, 0x00E0);
+        _mapChar(134, 0x00E5);
+        _mapChar(135, 0x00E7);
+        _mapChar(136, 0x00EA);
+        _mapChar(137, 0x00EB);
+        _mapChar(138, 0x00E8);
+        _mapChar(139, 0x00EF);
+        _mapChar(140, 0x00EE);
+        _mapChar(141, 0x00EC);
+        _mapChar(142, 0x00C4);
+        _mapChar(143, 0x00C5);
+        _mapChar(144, 0x00C9);
+        _mapChar(145, 0x00E6);
+        _mapChar(146, 0x00C6);
+        _mapChar(147, 0x00F4);
+        _mapChar(148, 0x00F6);
+        _mapChar(149, 0x00F2);
+        _mapChar(150, 0x00FB);
+        _mapChar(151, 0x00F9);
+        _mapChar(152, 0x00FF);
+        _mapChar(153, 0x00D6);
+        _mapChar(154, 0x00DC);
+        _mapChar(155, 0x00A2);
+        _mapChar(156, 0x00A3);
+        _mapChar(157, 0x00A5);
+        _mapChar(158, 0x20A7);
+        _mapChar(159, 0x0192);
+        _mapChar(160, 0x00E1);
+        _mapChar(161, 0x00ED);
+        _mapChar(162, 0x00F3);
+        _mapChar(163, 0x00FA);
+        _mapChar(164, 0x00F1);
+        _mapChar(165, 0x00D1);
+        _mapChar(166, 0x00AA);
+        _mapChar(167, 0x00BA);
+        _mapChar(168, 0x00BF);
+        _mapChar(169, 0x2310);
+        _mapChar(170, 0x00AC);
+        _mapChar(171, 0x00BD);
+        _mapChar(172, 0x00BC);
+        _mapChar(173, 0x00A1);
+        _mapChar(174, 0x00AB);
+        _mapChar(175, 0x00BB);
+        _mapChar(176, 0x2591);
+        _mapChar(177, 0x2592);
+        _mapChar(178, 0x2593);
+        _mapChar(179, 0x2502);
+        _mapChar(180, 0x2524);
+        _mapChar(181, 0x2561);
+        _mapChar(182, 0x2562);
+        _mapChar(183, 0x2556);
+        _mapChar(184, 0x2555);
+        _mapChar(185, 0x2563);
+        _mapChar(186, 0x2551);
+        _mapChar(187, 0x2557);
+        _mapChar(188, 0x255D);
+        _mapChar(189, 0x255C);
+        _mapChar(190, 0x255B);
+        _mapChar(191, 0x2510);
+        _mapChar(192, 0x2514);
+        _mapChar(193, 0x2534);
+        _mapChar(194, 0x252C);
+        _mapChar(195, 0x251C);
+        _mapChar(196, 0x2500);
+        _mapChar(197, 0x253C);
+        _mapChar(198, 0x255E);
+        _mapChar(199, 0x255F);
+        _mapChar(200, 0x255A);
+        _mapChar(201, 0x2554);
+        _mapChar(202, 0x2569);
+        _mapChar(203, 0x2566);
+        _mapChar(204, 0x2560);
+        _mapChar(205, 0x2550);
+        _mapChar(206, 0x256C);
+        _mapChar(207, 0x2567);
+        _mapChar(208, 0x2568);
+        _mapChar(209, 0x2564);
+        _mapChar(210, 0x2565);
+        _mapChar(211, 0x2559);
+        _mapChar(212, 0x2558);
+        _mapChar(213, 0x2552);
+        _mapChar(214, 0x2553);
+        _mapChar(215, 0x256B);
+        _mapChar(216, 0x256A);
+        _mapChar(217, 0x2518);
+        _mapChar(218, 0x250C);
+        _mapChar(219, 0x2588);
+        _mapChar(220, 0x2584);
+        _mapChar(221, 0x258C);
+        _mapChar(222, 0x2590);
+        _mapChar(223, 0x2580);
+        _mapChar(224, 0x03B1);
+        _mapChar(225, 0x00DF);
+        _mapChar(226, 0x0393);
+        _mapChar(227, 0x03C0);
+        _mapChar(228, 0x03A3);
+        _mapChar(229, 0x03C3);
+        _mapChar(230, 0x00B5);
+        _mapChar(231, 0x03C4);
+        _mapChar(232, 0x03A6);
+        _mapChar(233, 0x0398);
+        _mapChar(234, 0x03A9);
+        _mapChar(235, 0x03B4);
+        _mapChar(236, 0x221E);
+        _mapChar(237, 0x03C6);
+        _mapChar(238, 0x03B5);
+        _mapChar(239, 0x2229);
+        _mapChar(240, 0x2261);
+        _mapChar(241, 0x00B1);
+        _mapChar(242, 0x2265);
+        _mapChar(243, 0x2264);
+        _mapChar(244, 0x2320);
+        _mapChar(245, 0x2321);
+        _mapChar(246, 0x00F7);
+        _mapChar(247, 0x2248);
+        _mapChar(248, 0x00B0);
+        _mapChar(249, 0x2219);
+        _mapChar(250, 0x00B7);
+        _mapChar(251, 0x221A);
+        _mapChar(252, 0x207F);
+        _mapChar(253, 0x00B2);
+        _mapChar(254, 0x25A0);
+        _mapChar(255, 0x00A0);
+    }
+
+    function _mapChar(ccode, ucode) {
+        _ucharMap[ccode] = ucode;
+        _ccharMap[ucode] = ccode;
+    }
+
+    function _convertCharMap(str, charMap) {
+        var newstr = "";
+        for (var i=0; i < str.length; i++) {
+            var c = str.charCodeAt(i);
+            var uc = charMap[c];
+            if (uc) { c = uc; }
+            newstr += String.fromCharCode(c);
+        }
+        return newstr;
+    }
+
+    this.convertToUTF = function(str) {
+        return _convertCharMap(str, _ucharMap);
+    };
+
+    this.convertTo437 = function(str) {
+        return _convertCharMap(str, _ccharMap);
+    };
+
     function _init() {
         _initColorTable();
         _initInKeyMap();
         _initKeyHitMap();
+        _initCharMap();
+
+        addEventListener("gxscenecreate", function(event) {
+            _images[0].mode = 32;
+        });
 
         addEventListener("keydown", function(event) { 
             if (!_runningFlag) { return; }
             event.preventDefault();
             _lastKey = event.key;
             if (!_inputMode) {
+                _addInkeyPress(event);
                 var kh = _getKeyHit(event);
                 if (kh) {
                     _keyHitBuffer.push(kh);
@@ -3871,7 +4624,6 @@ var QB = new function() {
 
             event.preventDefault();
             if (!_inputMode) {
-                _addInkeyPress(event);
                 var kh = _getKeyHit(event);
                 if (kh) {
                     _keyHitBuffer.push(kh * -1);

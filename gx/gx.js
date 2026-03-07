@@ -2,12 +2,16 @@ var GX = new function() {
     var _canvas = null;
 	var _ctx = null;
     var _framerate = 60;
+    var _millisPerFrame = Math.trunc(1000 / _framerate + .1);
     var _bg = [];
     var _images = [];
     var _entities = [];
+    var _entities_active = [];
     var _entity_animations = [];
+    var _entity_render_mode = 0;
     var _scene = {};
     var _tileset = {};
+    var _tileset_tiles = [];
     var _tileset_animations = [];
     var _map = {};
     var _map_layers = [];
@@ -37,8 +41,6 @@ var GX = new function() {
     var _vfs = new VFS();
     var _vfsCwd = null;
 
-    var _glcanvas = null;
-
     // javascript specific
     var _onGameEvent = null;
     var _pressedKeys = {};
@@ -56,17 +58,22 @@ var GX = new function() {
         return { eid:0, charSpacing:0, lineSpacing: 0}
     }
     
+    function _qbBoolean(value) {
+        return value ? -1 : 0;
+    }
+
     function _reset() {
         // stop any sounds that are currently playing
         _soundStopAll();
-
-        _framerate = 60;
+        GX.frameRate(60);
         _bg = [];
         _images = [];
         _entities = [];
         _entity_animations = [];
+        _entity_render_mode = GX.ENTITY_RENDER_DEFAULT;
         _scene = {};
         _tileset = {};
+        _tileset_tiles = [];
         _tileset_animations = [];
         _map = {};
         _map_layers = [];
@@ -103,11 +110,12 @@ var GX = new function() {
 
     // Scene Functions
     // -----------------------------------------------------------------
-    function _sceneCreate(width, height) {
+    function _sceneCreate(width, height, supressEvents) {
         _canvas = document.getElementById("gx-canvas");
         if (!_canvas) {
 		    _canvas = document.createElement("canvas");
             _canvas.id = "gx-canvas";
+            _canvas.tabIndex = 0;
             document.getElementById("gx-container").appendChild(_canvas);
 
             _canvas.addEventListener("mousemove", function(event) {
@@ -117,6 +125,7 @@ var GX = new function() {
             });
     
             _canvas.addEventListener("mousedown", function(event) {
+                _canvas.focus();
                 event.preventDefault();
                 if (event.button == 0) { _mouseButtons[0] = -1; }
                 else if (event.button == 1) { _mouseButtons[2] = -1; }
@@ -136,7 +145,7 @@ var GX = new function() {
                 var move = event.deltaY;
                 if (move > 0) { move = 1; }
                 else if (move < 0) { move = -1; }
-                _mouseWheelFlag = move;
+                _mouseWheelFlag += move;
                 _mouseInputFlag = true;
             });
 
@@ -216,11 +225,6 @@ var GX = new function() {
         _canvas.height = height;
         _ctx = _canvas.getContext("2d");
 
-        //_glcanvas.width = width;
-        //_glcanvas.height = height;
-        //_glctx = _glcanvas.getContext("webgl");
-        ////__GL.init(_glctx);
-
         var footer = document.getElementById("gx-footer");
         footer.style.width = width;
         
@@ -238,7 +242,10 @@ var GX = new function() {
         _scene.constrainMode = GX.SCENE_CONSTRAIN_NONE;
         _scene.active = false;
 
-        _customEvent(GX.EVENT_INIT);
+        if (!supressEvents) {
+            window.dispatchEvent(new Event("gxscenecreate"));
+            _customEvent(GX.EVENT_INIT);
+        }
     }
 
     // Resize the scene with the specified pixel width and height.
@@ -247,6 +254,18 @@ var GX = new function() {
         _scene.height = sheight;
         _canvas.width = _scene.width;
         _canvas.height = _scene.height;
+        if (_scene.scaleX != 1) {
+            _ctx.imageSmoothingEnabled = false;
+            _ctx.scale(_scene.scaleX, _scene.scaleY);
+        }
+        _updateSceneSize();
+    }
+
+    function _sceneWindowSize(swidth, sheight) {
+        _scene.width = Math.floor(swidth / _scene.scaleX);
+        _scene.height = Math.floor(sheight / _scene.scaleY);
+        _canvas.width = swidth;
+        _canvas.height = sheight;
         if (_scene.scaleX != 1) {
             _ctx.imageSmoothingEnabled = false;
             _ctx.scale(_scene.scaleX, _scene.scaleY);
@@ -297,8 +316,7 @@ var GX = new function() {
     // handled externally.
     function _sceneDraw() {
         if (_map_loading) { return; }
-        var ei, ei2, frame;
-        frame = _scene.frame % GX.frameRate() + 1;
+        var frame = _scene.frame % GX.frameRate() + 1;
 
         // If the screen has been resized, resize the destination screen image
         //If _Resize And Not GXSceneEmbedded Then
@@ -318,6 +336,24 @@ var GX = new function() {
         // Call out to any custom screen drawing
         _customDrawEvent(GX.EVENT_DRAWBG);
 
+        // Initialize the renderable entities
+        _entities_active = [];
+        for (var ei=1; ei <= _entities.length; ei++) {
+            var e = _entities[ei-1];
+            if (!e.screen) {
+                if (_rectCollide(e.x, e.y, e.width, e.height, GX.sceneX(), GX.sceneY(), GX.sceneWidth(), GX.sceneHeight())) {
+                    _entities_active.push(ei);
+                }
+            }
+        }
+        if (_entity_render_mode == GX.ENTITY_RENDER_TOPDOWN) {
+            _entities_active.sort(function(ai, bi) {
+                var a = _entities[ai-1];
+                var b = _entities[bi-1];
+                return (a.y + a.height - a.coBottom) - (b.y + b.height - b.coBottom);
+            });
+        }
+
         // Draw the map tiles
         GX.mapDraw();
 
@@ -325,19 +361,7 @@ var GX = new function() {
         _customDrawEvent(GX.EVENT_DRAWMAP);
 
         // Draw the entities
-        for (var ei = 1; ei <= _entities.length; ei++) {
-            var e = _entities[ei-1];
-            if (!e.screen) {
-                if (_rectCollide(e.x, e.y, e.width, e.height, GX.sceneX(), GX.sceneY(), GX.sceneWidth(), GX.sceneHeight())) {
-                    _entityDraw(e);
-                }
-            }
-            if (e.animate > 0) {
-                if (frame % (GX.frameRate() / e.animate) == 0) {
-                    GX.entityFrameNext(ei);
-                }
-            }
-        }
+        _drawEntityLayer(0);
 
         // Draw the screen entities which should appear on top of the other game entities
         // and have a fixed position
@@ -345,6 +369,9 @@ var GX = new function() {
             var e = _entities[ei-1];
             if (e.screen) {
                 _entityDraw(e);
+                if (frame % Math.round(GX.frameRate() / e.animate) == 0) {
+                    GX.entityFrameNext(ei);
+                }
             }
         }
 
@@ -360,22 +387,16 @@ var GX = new function() {
         _customEvent(GX.EVENT_PAINTAFTER);
     }
     
-    function _sceneUpdate() {
+    async function _sceneUpdate() {
         _scene.frame++;
         if (_map_loading) { return; }
 
         // Call custom game update logic
         _customEvent(GX.EVENT_UPDATE);
 
-        // Perform any movement for registered player entities
-        //Dim i As Integer
-        //For i = 1 To __gx_player_count
-        //    __GX_PlayerAction i
-        //Next i
-
         // Check for entity movement and collisions
         // TODO: filter out non-moving entities
-        _sceneMoveEntities();
+        await _sceneMoveEntities();
 
         // Perform any auto-scene moves
         var sx, sy;
@@ -452,12 +473,22 @@ var GX = new function() {
         window.requestAnimationFrame(_sceneLoop);
     }
 
-    function _sceneLoop() {
+    let lastTimestamp = 0;
+    let fpsSnapshot = 0;
+    async function _sceneLoop(timestamp) {
         if (!_scene.active) { return; }
-
-        GX.sceneUpdate();
-        GX.sceneDraw();
-
+        if (lastTimestamp == 0) { lastTimestamp = timestamp; }
+        if (timestamp - lastTimestamp >= _millisPerFrame) {
+            await GX.sceneUpdate();
+            GX.sceneDraw();
+            if (_scene.frame % 10 == 0) {
+                if (_scene.frame > 10) {
+                    _framerate = Math.round(10 / (timestamp - fpsSnapshot) * 1000);
+                }
+                fpsSnapshot = timestamp;
+            }
+            lastTimestamp = timestamp
+        }
         window.requestAnimationFrame(_sceneLoop);
     }
 
@@ -518,15 +549,16 @@ var GX = new function() {
 
 
     function _keyDown(key) {
-        return _pressedKeys[key];
+        return _qbBoolean(_pressedKeys[key]);
     }
 
     // Frame Functions
     // -------------------------------------------------------------------
     // Gets or sets the current frame rate (expressed in frames-per-second or FPS).
-    function _frameRate (frameRate) {
-        if (frameRate != undefined) {
-            _framerate = frameRate;
+    function _frameRate (fps) {
+        if (fps != undefined) {
+            _millisPerFrame = Math.trunc(1000 / (fps + .1));
+            _framerate = fps;
         }
         return _framerate;
     }
@@ -739,11 +771,18 @@ var GX = new function() {
             _sound_muted = muted;
             // TODO: loop through list of loaded sounds so they can all be muted / unmuted
         }
-        return _sound_muted;
+        return _qbBoolean(_sound_muted);
     }
     
     // Entity Functions
     // -----------------------------------------------------------------------------
+    function _entityRenderMode (renderMode) {
+        if (renderMode != undefined) {
+            _entity_render_mode = renderMode;
+        }
+        return _entity_render_mode;
+    }
+
     function _entityCreate (imageFilename, ewidth, height, seqFrames, uid) {
         var newent = {};
         newent.x = 0;
@@ -767,19 +806,14 @@ var GX = new function() {
         newent.coRight = 0;
         newent.coBottom = 0;
         newent.applyGravity = false;
+        newent.sequences = 0;
+        newent.mapLayer = 0;
+
         _entities.push(newent);
         
         var animation = [];
         _entity_animations.push(animation);
-
-        /*
-            newent.sequences = Math.floor(_images[newent.image-1].height / height);
-            console.log(newent.sequences);
-            for (var i=0; i < newent.sequences; i++) {
-                animation.push({ frames: seqFrames });
-            }
-        */
-
+        
         return _entities.length;
     }
     
@@ -792,7 +826,7 @@ var GX = new function() {
     function _entityDraw (ent) {
         if (ent.hidden) { return; }
         var x, y;
-        if (ent.screen == 1) {
+        if (ent.screen) {
             x = ent.x
             y = ent.y
         } else {
@@ -818,7 +852,7 @@ var GX = new function() {
             return _entities[eid-1].seqFrames;
         }
         else {
-            return _entity_animations[eid-1].frames;
+            return a[seq-1].frames;
         }
     }
 
@@ -862,7 +896,7 @@ var GX = new function() {
         if (visible != undefined) {
             _entities[eid-1].hidden = !visible;
         }
-        return !_entities[eid-1].hidden;
+        return _qbBoolean(!_entities[eid-1].hidden);
     }
 
     function _entityX (eid) { return _entities[eid-1].x; }
@@ -873,7 +907,7 @@ var GX = new function() {
     
     function _entityFrameNext (eid) {
         if (_entities[eid-1].animateMode == GX.ANIMATE_SINGLE) {
-            if (_entities[eid-1].spriteFrame + 1 >= _entities[eid-1].seqFrames) {
+            if (_entities[eid-1].spriteFrame + 1 > _entities[eid-1].seqFrames) {
                 if (_entities[eid-1].spriteFrame != _entities[eid-1].prevFrame) {
                     // Fire animation complete event
                     var e = {};
@@ -895,7 +929,7 @@ var GX = new function() {
 
     function _entityFrameSet (eid, seq, frame) {
         _entities[eid-1].spriteSeq = seq;
-        _entities[eid-1].seqFrames = _entityGetFrames(eid, seq); //_entity_animations[eid-1][seq-1].frames;
+        _entities[eid-1].seqFrames = _entityGetFrames(eid, seq);
         _entities[eid-1].spriteFrame = frame;
         _entities[eid-1].prevFrame = frame - 1;
     }
@@ -912,12 +946,11 @@ var GX = new function() {
         return _entities[eid-1].sequences;
     }
 
-    function _entityFrames (eid, seq) {
-        return _entityGetFrames(eid, seq); //_entity_animations[eid-1][seq-1].frames;
-    }
-
     function _entityFrames (eid, seq, frames) {
-        _entity_animations[eid-1][seq-1] = { frames: frames };
+        if (frames != undefined) {
+            _entity_animations[eid-1][seq-1] = { frames: frames };
+        }
+        return _entityGetFrames(eid, seq);
     }
 
     function _entityType (eid, etype) {
@@ -926,6 +959,30 @@ var GX = new function() {
         }
         return _entities[eid-1].type
 	}
+
+    function _entityMapLayer (eid, layer) {
+        if (layer != undefined) {
+            _entities[eid-1].mapLayer = layer;
+        }
+        return _entities[eid-1].mapLayer;
+    }
+
+    function _drawEntityLayer (layer) {
+        var frame = _scene.frame % GX.frameRate() + 1;
+
+        for (var i=0; i < _entities_active.length; i++) {
+            var ei = _entities_active[i];
+            var e = _entities[ei-1];
+            if (e.mapLayer == layer) {
+                _entityDraw(e);
+                if (e.animate > 0) {
+                    if (frame % Math.round(GX.frameRate() / e.animate) == 0) {
+                        GX.entityFrameNext(ei);
+                    }
+                }
+            }
+        }
+    }
 
     function _entityApplyGravity (eid, gravity) {
         if (gravity != undefined) {
@@ -983,41 +1040,281 @@ var GX = new function() {
     }
 
     async function _mapLoad(filename) {
+        try {
+            var file = _vfs.getNode(filename, _vfsCwd);
+            if (file && file.type == _vfs.FILE) {
+                await _mapLoadV2(filename);
+                return;
+            }
+            else {
+                var tmpDir = _vfs.getNode("_gxtmp", _vfs.rootDirectory());
+                if (!tmpDir) { tmpDir = _vfs.createDirectory("_gxtmp", _vfs.rootDirectory()); }
+                file = _vfs.createFile(crypto.randomUUID(), tmpDir);  
+                var res = await fetch(filename);
+                _vfs.writeData(file, await res.arrayBuffer());
+                await _mapLoadV2(_vfs.fullPath(file));
+                _vfs.removeFile(file);
+                return;
+            }
+        }
+        catch (ex) {
+            console.log(ex);
+            // if the load fails try falling back to the older JSON format
+            _map_loading = true;
+            var data = null;
+            var file = _vfs.getNode(filename, _vfsCwd);
+            if (file && file.type == _vfs.FILE) {
+                data = JSON.parse(_vfs.readText(file));
+            }
+            else {
+                data = await _getJSON(filename);
+            }
+            var parentPath = filename.substring(0, filename.lastIndexOf("/")+1);
+            var imagePath = data.tileset.image.substring(data.tileset.image.lastIndexOf("/")+1);
+            GX.tilesetCreate(parentPath + imagePath, data.tileset.width, data.tileset.height, data.tileset.tiles, data.tileset.animations);
+            GX.mapCreate(data.columns, data.rows, data.layers.length);
+            if (data.isometric) {
+                GX.mapIsometric(true);
+            }
+            for (var layer=0; layer < data.layers.length; layer++) {
+                for (var row=0; row < GX.mapRows(); row++) {
+                    for (var col=0; col < GX.mapColumns(); col++) {
+                        GX.mapTile(col, row, layer+1, data.layers[layer][row * GX.mapColumns() + col]);
+                    }
+                }
+            }
+            _map_loading = false;
+        }
+    }
+    
+    async function _mapLoadV2(filename) {
         _map_loading = true;
-        var data = null;
-
-        var file = _vfs.getNode(filename, _vfsCwd);
-        if (file && file.type == _vfs.FILE) {
-            data = JSON.parse(_vfs.readText(file));
+        var vfs = GX.vfs();
+        var fh = { 
+            file: vfs.getNode(filename, vfs.rootDirectory()), 
+            pos: 0 
+        };
+    
+        var tmpDir = vfs.getNode("_gxtmp", vfs.rootDirectory());
+        if (!tmpDir) { tmpDir = vfs.createDirectory("_gxtmp", vfs.rootDirectory()); }
+        
+        var version = readInt(fh);
+        var columns = readInt(fh);
+        var rows = readInt(fh);
+        var layers = readInt(fh);
+        var isometric = readInt(fh);
+        
+        slen = readLong(fh);
+        
+        var data = vfs.readData(fh.file, fh.pos, slen)
+        fh.pos += data.byteLength;
+        
+        // write the raw data out and read it back in as a string
+        var ldataFile = vfs.createFile("layer.dat", tmpDir);
+        vfs.writeData(ldataFile, data);
+        ldataFile = vfs.getNode("layer.dat", tmpDir);
+        var ldstr = vfs.readText(ldataFile);//', ldstr);
+        vfs.removeFile(ldataFile, tmpDir);
+        
+        // inflate the compressed data and write it to a temp file
+        var ldata = pako.inflate(vfs.textToData(ldstr));
+        ldataFile = vfs.createFile("layer-i.dat", tmpDir);
+        vfs.writeData(ldataFile, ldata);
+    
+        // read the data
+        ldataFile = vfs.getNode("layer-i.dat", tmpDir);
+        ldata = vfs.readData(ldataFile, 0, ldataFile.data.byteLength)
+        ldata = new Int16Array(ldata);
+        vfs.removeFile(ldataFile, tmpDir);
+    
+        // read the tileset data
+        var tsVersion = readInt(fh);
+        var tsFilename = readString(fh);
+        var tsWidth = readInt(fh);
+        var tsHeight = readInt(fh);
+        var tsSize = readLong(fh);
+        
+        data = vfs.readData(fh.file, fh.pos, tsSize);
+        var pngFile = vfs.createFile("tileset.png", tmpDir)
+        vfs.writeData(pngFile, data);
+        fh.pos += data.byteLength;
+    
+        fh.pos++;
+        
+        // read the tileset tiles data
+        var asize = readInt(fh);
+        var tiles = [];
+        for (var i=0; i < 4; i++) { readInt(fh); } //' read the blank 0th element
+        for (var i=1; i <= asize; i++) {
+            readInt(fh); // not using id currently
+            tiles.push([readInt(fh), readInt(fh), readInt(fh)]);
         }
-        else {
-            data = await _getJSON(filename);
+    
+        // read the tileset animations data
+        asize = readInt(fh);
+        var animations = [];
+        for (var i=0; i < 3; i++) { readInt(fh); } //' read the first row
+        for (var i=1; i <= asize; i++) {
+            animations.push([readInt(fh), readInt(fh), readInt(fh)]);
         }
-        var parentPath = filename.substring(0, filename.lastIndexOf("/")+1);
-        var imagePath = data.tileset.image.substring(data.tileset.image.lastIndexOf("/")+1);
-        GX.tilesetCreate(parentPath + imagePath, data.tileset.width, data.tileset.height, data.tileset.tiles, data.tileset.animations);
-        GX.mapCreate(data.columns, data.rows, data.layers.length);
-        if (data.isometric) {
+    
+        GX.tilesetCreate("/_gxtmp/tileset.png", tsWidth, tsHeight, tiles, animations);
+        GX.mapCreate(columns, rows, layers);
+        if (isometric) {
             GX.mapIsometric(true);
         }
-        for (var layer=0; layer < data.layers.length; layer++) {
+        var li = 0
+        for (var l=0; l <= GX.mapLayers(); l++) {
+            if (l > 0) { li++; }
             for (var row=0; row < GX.mapRows(); row++) {
                 for (var col=0; col < GX.mapColumns(); col++) {
-                    GX.mapTile(col, row, layer+1, data.layers[layer][row * GX.mapColumns() + col]);
+                    if (l > 0) {
+                        GX.mapTile(col, row, l, ldata[li]);
+                    }
+                    li++;
                 }
             }
         }
+        
+        function readInt(fh) {
+            var data = vfs.readData(fh.file, fh.pos, 2);
+            var value = (new DataView(data)).getInt16(0, true);
+            fh.pos += data.byteLength;
+            return value;
+        }
+        
+        function readLong(fh) {
+            var data = vfs.readData(fh.file, fh.pos, 4);
+            var value = (new DataView(data)).getInt32(0, true);
+            fh.pos += data.byteLength;
+            return value;
+        }
+        
+        function readString(fh) {
+            var slen = readLong(fh);
+            data = vfs.readData(fh.file, fh.pos, slen)
+            var value = String.fromCharCode.apply(null, new Uint8Array(data))
+            fh.pos += data.byteLength;
+            return value;
+        }
         _map_loading = false;
     }
+    
+    async function _mapSave (filename) {
+        var vfs = GX.vfs();
+        var parentPath = vfs.getParentPath(filename);
+        filename = vfs.getFileName(filename);
+    
+        // create the parent path
+        var dirs = parentPath.split("/");
+        var parentDir = vfs.rootDirectory();
+        for (var i=0; i < dirs.length; i++) {
+            if (dirs[i] == "") { continue; }
+            var p = vfs.getNode(dirs[i], parentDir);
+            if (!p) { p = vfs.getNode(dirs[i], parentDir); }
+            parentDir = p;
+        }
+    
+        var tmpDir = vfs.getNode("_gxtmp", vfs.rootDirectory());
+        if (!tmpDir) { tmpDir = vfs.createDirectory("_gxtmp", vfs.rootDirectory()); }
+    
+        var file = vfs.createFile(filename, parentDir);
+        var fh = { file: file, pos: 0 };
+        
+        writeInt(fh, 2); // version
+        writeInt(fh, GX.mapColumns());
+        writeInt(fh, GX.mapRows());
+        writeInt(fh, GX.mapLayers());
+        writeInt(fh, GX.mapIsometric());
+        
+        var size = (GX.mapLayers() + 1) * GX.mapColumns() * GX.mapRows() + GX.mapLayers();
+        var ldata = new ArrayBuffer(size * 2 + 4);
+        var dview = new DataView(ldata);
+        var li = GX.mapColumns() * GX.mapRows() * 2 + 1;
+        for (var l=1; l <= GX.mapLayers(); l++) {
+            if (l > 1) { li+=2; }
+            for (var row=0; row < GX.mapRows(); row++) {
+                for (var col=0; col < GX.mapColumns(); col++) {
+                    if (l == 0) { 
+                        dview.setInt16(li+1, 0, true);
+                    }
+                    else {
+                        dview.setInt16(li+1, GX.mapTile(col, row, l), true);
+                    }
+                    li+=2;
+                }
+            }
+        }
 
+        var cdata = pako.deflate(ldata);
+        writeLong(fh, cdata.byteLength);
+        vfs.writeData(fh.file, cdata, fh.pos);
+        fh.pos += cdata.byteLength;
+
+        // write the tileset data
+        writeInt(fh, 2); // version
+        writeString(fh, "tileset.gxi");
+        writeInt(fh, GX.tilesetWidth());
+        writeInt(fh, GX.tilesetHeight());
+        
+        // write the tileset png data
+        var tsfile = vfs.getNode(_tileset.filename);
+        writeLong(fh, tsfile.data.byteLength);
+        vfs.writeData(fh.file, tsfile.data, fh.pos);
+        fh.pos += tsfile.data.byteLength;
+        fh.pos++;
+        
+        // write the tileset tiles data  
+        writeInt(fh, _tileset_tiles.length);
+        for (var i=0; i < 4; i++) { writeInt(fh, 0); }
+        for (var i=0; i < _tileset_tiles.length; i++) {
+            writeInt(fh, 0);//i+1);
+            writeInt(fh, _tileset_tiles[i].animationId);
+            writeInt(fh, _tileset_tiles[i].animationSpeed);
+            writeInt(fh, _tileset_tiles[i].animationFrame);
+        }
+
+        // write the tileset animations data
+        writeInt(fh, _tileset_animations.length);
+        for (var i=0; i < 3; i++) { writeInt(fh, 0); }
+        for (var i=0; i < _tileset_animations.length; i++) {
+            writeInt(fh, _tileset_animations[i].tileId);
+            writeInt(fh, _tileset_animations[i].firstFrame);
+            writeInt(fh, _tileset_animations[i].nextFrame);
+        }
+        
+    
+        function writeInt(fh, value) {
+            var data = new Int16Array([value]).buffer;
+            vfs.writeData(fh.file, data, fh.pos);
+            fh.pos = fh.pos + data.byteLength
+        }
+        
+        function writeLong(fh, value) {
+            var data = new Int32Array([value]).buffer; 
+            vfs.writeData(fh.file, data, fh.pos);
+            fh.pos = fh.pos + data.byteLength
+        }
+        
+        function writeString(fh, value) {
+            var slen = value.length;
+            writeLong(fh, slen);
+            var data = vfs.textToData(value);
+            vfs.writeData(fh.file, data, fh.pos);
+            fh.pos = fh.pos + data.byteLength
+        }
+    }
+    
     function _getJSON(url) {
         return fetch(url)
             .then((response)=>response.json())
             .then((responseJson)=>{return responseJson});
     }
 
-    function _mapLayerInit() {
-        var layerSize = _map.rows * _map.columns;
+    function _mapLayerInit(cols, rows) {
+        if (cols == undefined) { cols = _map.columns; }
+        if (rows == undefined) { rows = _map.rows; }
+        var layerSize = rows * cols;
         var layerData = [];
         for (var i=0; i < layerSize; i++) {
             layerData.push({ tile: 0});
@@ -1033,15 +1330,18 @@ var GX = new function() {
         if (visible != undefined) {
             _map_layer_info[layer-1].hidden = !visible;
         }
-        return !_map_layer_info[layer-1].hidden;
+        return _qbBoolean(!_map_layer_info[layer-1].hidden);
     }
 
     function _mapIsometric(iso) {
         if (iso != undefined) {
             _map.isometric = iso;
+            if (iso) {
+                _entity_render_mode = GX.ENTITY_RENDER_TOPDOWN;
+            }
             _updateSceneSize();
         }
-        return _map.isometric;
+        return _qbBoolean(_map.isometric);
     }
 
     function _mapLayerAdd() {
@@ -1052,84 +1352,70 @@ var GX = new function() {
         });
         _map_layers.push(_mapLayerInit());
     }
-/*
-    Sub GXMapLayerInsert (beforeLayer As Integer)
-        If beforeLayer < 1 Or beforeLayer > GXMapLayers Then Exit Sub
 
-        GXMapLayerAdd
-        Dim layer As Integer
-        Dim tile As Integer
-        For layer = GXMapLayers To beforeLayer + 1 Step -1
-            'gx_map_layer_info(layer) = gx_map_layer_info(layer - 1)
-            For tile = 0 To GXMapRows * GXMapColumns
-                __gx_map_layers(tile, layer) = __gx_map_layers(tile, layer - 1)
-            Next tile
-        Next layer
-        Dim blankTile As GXMapTile
-        For tile = 0 To GXMapRows * GXMapColumns
-            __gx_map_layers(tile, beforeLayer) = blankTile
-        Next tile
-    End Sub
+    function _mapLayerInsert (beforeLayer) {
+        if (beforeLayer < 1 || beforeLayer > GX.mapLayers()) { return; }
 
-    Sub GXMapLayerRemove (removeLayer As Integer)
-        If removeLayer < 1 Or removeLayer > GXMapLayers Or GXMapLayers < 2 Then Exit Sub
+        GX.mapLayerAdd();
+        for (var layer = GX.mapLayers(); layer > beforeLayer; layer--) {
+            for (var tile = 0; tile <= GX.mapRows() * GX.mapColumns(); tile++) {
+                _map_layers[layer-1][tile] = _map_layers[layer - 2][tile];
+            }
+        }
+        _map_layers[beforeLayer-1] = _mapLayerInit();
+    }
 
-        Dim layer As Integer
-        Dim tile As Integer
-        For layer = removeLayer To GXMapLayers - 1
-            For tile = 0 To GXMapRows * GXMapColumns
-                __gx_map_layers(tile, layer) = __gx_map_layers(tile, layer + 1)
-            Next tile
-        Next layer
+    function _mapLayerRemove (removeLayer) {
+        if (removeLayer < 1 || removeLayer > GX.mapLayers() || GX.mapLayers < 2) { return; }
 
-        ReDim _Preserve __gx_map_layer_info(GXMapLayers - 1) As GXMapLayer
-        ReDim _Preserve __gx_map_layers(GXMapRows * GXMapColumns, GXMapLayers - 1) As GXMapTile
-        __gx_map.layers = GXMapLayers - 1
-    End Sub
+        for (var layer = removeLayer; layer < GX.mapLayers(); layer++) {
+            for (var tile = 0; tile <= GX.mapRows() * GX.mapColumns(); tile++) {
+                _map_layers[layer-1][tile] = _map_layers[layer][tile];
+            }
+        }
+        _map_layer_info.pop();
+        _map_layers.pop();
+        _map.layers = GX.mapLayers() - 1;
+    }
 
-    Sub GXMapResize (columns As Integer, rows As Integer)
-        Dim tempMap(GXMapRows * GXMapColumns, GXMapLayers) As GXMapTile
-        Dim m1 As _MEM: m1 = _Mem(__gx_map_layers())
-        Dim m2 As _MEM: m2 = _Mem(tempMap())
-        _MemCopy m1, m1.OFFSET, m1.SIZE To m2, m2.OFFSET
-        _MemFree m1
-        _MemFree m2
 
-        ReDim __gx_map_layers(rows * columns, GXMapLayers) As GXMapTile
+    function _mapResize (columns, rows) {
+        var tempMap = structuredClone(_map_layers);
+        _map_layers = new Array(GX.mapLayers());
 
-        Dim layer As Integer
-        Dim row As Integer
-        Dim column As Integer
-        Dim maxColumns As Integer
-        Dim maxRows As Integer
-        If columns > GXMapColumns Then
-            maxColumns = GXMapColumns
-        Else
-            maxColumns = columns
-        End If
-        If rows > GXMapRows Then
-            maxRows = GXMapRows
-        Else
-            maxRows = rows
-        End If
+        var maxColumns = 0;
+        var maxRows = 0;
+        if (columns > GX.mapColumns()) {
+            maxColumns = GX.mapColumns();
+        }
+        else {
+            maxColumns = columns;
+        }
+        if (rows > GX.mapRows) {
+            maxRows = GX.mapRows();
+        }
+        else {
+            maxRows = rows;
+        }
 
-        Dim blankTile As GXMapTile
-        For layer = 1 To GXMapLayers
-            For row = 0 To maxRows - 1
-                For column = 0 To maxColumns - 1
-                    If column >= GXMapColumns Or row >= GXMapRows Then
-                        __gx_map_layers(row * columns + column, layer) = blankTile
-                    Else
-                        __gx_map_layers(row * columns + column, layer) = tempMap(row * GXMapColumns + column, layer)
-                    End If
-                Next column
-            Next row
-        Next layer
+        for (var layer = 1; layer <= GX.mapLayers(); layer++) {
+            _map_layers[layer-1] = _mapLayerInit(columns, rows);
+            for (var row = 0; row < maxRows; row++) {
+                for (var column = 0; column < maxColumns; column++) {
+                    if (column >= GX.mapColumns() || row >= GX.mapRows()) {
+                        _map_layers[layer-1][row * columns + column].tile = 0;
+                    }
+                    else { //if (GX.mapColumns() > column && GX.mapRows() > rows) {
+                        _map_layers[layer-1][row * columns + column].tile = tempMap[layer-1][row * GX.mapColumns() + column].tile;
+                    }
+                }
+            }
+        }
 
-        __gx_map.columns = columns
-        __gx_map.rows = rows
-    End Sub
-*/
+        _map.columns = columns;
+        _map.rows = rows;
+    }
+
     function _mapDraw() {
         if (_mapRows() < 1) { return; }
 
@@ -1186,6 +1472,7 @@ var GX = new function() {
                     srow = srow + 1;
                 }
             } // layer is not hidden
+            _drawEntityLayer(li);
         }
 
         // Perform tile animation
@@ -1275,8 +1562,8 @@ var GX = new function() {
 
     // Tileset Methods
     // ----------------------------------------------------------------------------
-    function _tilesetCreate (tilesetFilename, tileWidth, tileHeight, tiles, animations) {
-        GX.tilesetReplaceImage(tilesetFilename, tileWidth, tileHeight);
+    async function _tilesetCreate (tilesetFilename, tileWidth, tileHeight, tiles, animations) {
+        await GX.tilesetReplaceImage(tilesetFilename, tileWidth, tileHeight);
 
         _tileset_tiles = [];
         if (tiles != undefined) {
@@ -1314,15 +1601,22 @@ var GX = new function() {
         }
     }
 
-    function _tilesetReplaceImage (tilesetFilename, tilewidth, tileheight) {
+    async function _tilesetReplaceImage (tilesetFilename, tilewidth, tileheight) {
         _tileset.filename = tilesetFilename;
         _tileset.width = tilewidth;
         _tileset.height = tileheight;
+        var imgLoaded = false;
         _tileset.image = _imageLoad(tilesetFilename, function(img) {
             _tileset.columns = img.width / GX.tilesetWidth();
             _tileset.rows = img.height / GX.tilesetHeight();
             _updateSceneSize();
+            imgLoaded = true;
         });
+        var waitMillis = 0;
+        while (!imgLoaded & waitMillis < 3000) {
+            await GX.sleep(10);
+            waitMillis += 10;
+        }
     }
 /*
     Sub GXTilesetLoad (filename As String)
@@ -1462,28 +1756,26 @@ var GX = new function() {
     }
 
     function _tilesetAnimationFrames (tileId, tileFrames /* QB Array */) {
-        // TODO: create an overriden version of this method that returns a standard javascript array
         if (tileId < 0 || tileId > GX.tilesetRows() * GX.tilesetColumns()) { return 0; }
 
-        var tileFrames = GX.initArray([0], { tileId: 0, firstFrame: 0, nextFrame: 0 });
+        GX.resizeArray(tileFrames, [{l:0,u:0}], 0);
         var frameCount = 0;
         var frame = _tileset_tiles[tileId-1].animationId;
         while (frame > 0) {
             frameCount = frameCount + 1
-            GX.resizeArray(tileFrames, [frameCount], { tileId: 0, firstFrame: 0, nextFrame: 0 }, true);
+            GX.resizeArray(tileFrames, [{l:0,u:frameCount}], 0, true);
             GX.arrayValue(tileFrames, [frameCount]).value = _tileset_animations[frame-1].tileId;
             frame = _tileset_animations[frame-1].nextFrame;
         }
         return frameCount;
     }
 
-    function _tilesetAnimationSpeed (tileId) {
-        if (tileId > GX.tilesetRows() * GX.tilesetColumns()) { return; }
-        return _tileset_tiles[tileId-1].animationSpeed;
-    }
-
     function _tilesetAnimationSpeed (tileId, speed) {
-        _tileset_tiles[tileId-1].animationSpeed = speed;
+        if (tileId > GX.tilesetRows() * GX.tilesetColumns()) { return; }
+        if (speed != undefined) {
+            _tileset_tiles[tileId-1].animationSpeed = speed;
+        }
+        return _tileset_tiles[tileId-1].animationSpeed;
     }
 
     function _tileFrame (tileId) {
@@ -1507,7 +1799,7 @@ var GX = new function() {
         var firstFrame = _tileset_tiles[tileId-1].animationId;
         var animationSpeed = _tileset_tiles[tileId-1].animationSpeed;
 
-        if (frame % (GX.frameRate() / animationSpeed) == 0) {
+        if (frame % Math.round(GX.frameRate() / animationSpeed) == 0) {
             var currFrame = firstFrame;
             if (_tileset_tiles[tileId-1].animationFrame > 0) {
                 currFrame = _tileset_tiles[tileId-1].animationFrame;
@@ -1542,7 +1834,7 @@ var GX = new function() {
             if (r1x1 <= r2x2) {
                 if (r1y2 >= r2y1) {
                     if (r1y1 <= r2y2) {
-                        collide = 1;
+                        collide = -1;
                     }
                 }
             }
@@ -1550,13 +1842,13 @@ var GX = new function() {
         return collide;
     }
 
-    function _sceneMoveEntities() {
+    async function _sceneMoveEntities() {
         var frameFactor = 1 / GX.frameRate();
 
         for (var eid = 1; eid <= _entities.length; eid++) {
             if (!_entities[eid-1].screen) {
                 //alert(eid + ":" + GX.entityVX(eid));
-                _sceneMoveEntity(eid);
+                await _sceneMoveEntity(eid);
 
                 // apply the move vector to the entity's position
                 if (GX.entityVX(eid)) {
@@ -1569,19 +1861,18 @@ var GX = new function() {
         }
     }
 
-    function _sceneMoveEntity(eid) {
+    async function _sceneMoveEntity(eid) {
         var tpos = {};
-        var centity = 0; // INTEGER
+        var centity = { id: 0 }; // INTEGER
         var tmove = 0;   // INTEGER
         var testx = 0;   // INTEGER
         var testy = 0 ;  // INTEGER
-//alert(GX.entityVX(eid));
 
         // Test upward movement
         if (GX.entityVY(eid) < 0) {
             testy = Math.round(GX.entityVY(eid) / GX.frameRate());
             if (testy > -1) { testy = -1; }
-            tmove = Math.round(_entityTestMove(eid, 0, testy, tpos, centity));
+            tmove = Math.round(await _entityTestMove(eid, 0, testy, tpos, centity));
             if (tmove == 0) {
                 if (GX.entityApplyGravity(eid)) {
                     // reverse the motion
@@ -1592,8 +1883,8 @@ var GX = new function() {
                 }
 
                 // don't let the entity pass into the collision entity or tile
-                if (centity > 0) {
-                    GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity) - GX.entityCollisionOffsetBottom(centity) + GX.entityHeight(centity) - GX.entityCollisionOffsetTop(eid));
+                if (centity.id > 0) {
+                    GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity.id) - GX.entityCollisionOffsetBottom(centity.id) + GX.entityHeight(centity.id) - GX.entityCollisionOffsetTop(eid));
                 } else {
                     GX.entityPos(eid, GX.entityX(eid), (tpos.y + 1) * GX.tilesetHeight() - GX.entityCollisionOffsetTop(eid));
                 }
@@ -1605,14 +1896,14 @@ var GX = new function() {
             if (GX.entityVY(eid) > 0) {
                 testy = Math.round(GX.entityVY(eid) / GX.frameRate());
                 if (testy < 1) { testy = 1; }
-                tmove = Math.round(_entityTestMove(eid, 0, testy, tpos, centity));
+                tmove = Math.round(await _entityTestMove(eid, 0, testy, tpos, centity));
                 if (tmove == 0) {
                     // stop the motion
                     GX.entityVY(eid, 0);
 
                     // don't let the entity pass into the collision entity or tile
-                    if (centity > 0) {
-                        GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity) + GX.entityCollisionOffsetTop(centity) - GX.entityHeight(eid) + GX.entityCollisionOffsetBottom(eid));
+                    if (centity.id > 0) {
+                        GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity.id) + GX.entityCollisionOffsetTop(centity.id) - GX.entityHeight(eid) + GX.entityCollisionOffsetBottom(eid));
                     }
                     if (tpos.y > -1) {
                         GX.entityPos(eid, GX.entityX(eid), tpos.y * GX.tilesetHeight() - GX.entityHeight(eid) + GX.entityCollisionOffsetBottom(eid));
@@ -1624,12 +1915,12 @@ var GX = new function() {
             // Apply gravity
             testy = Math.round(GX.entityVY(eid) / GX.frameRate());
             if (testy < 1) { testy = 1; }
-            tmove = Math.round(_entityTestMove(eid, 0, testy, tpos, centity));
+            tmove = Math.round(await _entityTestMove(eid, 0, testy, tpos, centity));
             if (tmove == 1) {
                 // calculate the number of seconds since the gravity started being applied
                 var t = (GX.frame() - _entities[eid-1].jumpstart) / GX.frameRate();
                 // adjust the y velocity for gravity
-                var g = _gravity * t ** 2 / 2;
+                var g = _gravity * t ** 2 / 2 * (60 / GX.frameRate());
                 if (g < 1) { g = 1; }
                 _entities[eid-1].vy = GX.entityVY(eid) + g;
                 if (GX.entityVY(eid) > _terminal_velocity) { GX.entityVY(eid, _terminal_velocity); }
@@ -1641,8 +1932,8 @@ var GX = new function() {
                     GX.entityVY(eid, 0);
 
                     // don't let the entity fall through the collision entity or tile
-                    if (centity > 0) {
-                        GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity) + GX.entityCollisionOffsetTop(centity) - GX.entityHeight(eid) + GX.entityCollisionOffsetBottom(eid));
+                    if (centity.id > 0) {
+                        GX.entityPos(eid, GX.entityX(eid), GX.entityY(centity.id) + GX.entityCollisionOffsetTop(centity.id) - GX.entityHeight(eid) + GX.entityCollisionOffsetBottom(eid));
                     }
                     else {
                         //alert("pos: " + eid + ":" + tpos.y);
@@ -1656,14 +1947,14 @@ var GX = new function() {
             // Test right movement
             testx = Math.round(GX.entityVX(eid) / GX.frameRate());
             if (testx < 1) { testx = 1 };
-            tmove = Math.round(_entityTestMove(eid, testx, 0, tpos, centity));
+            tmove = Math.round(await _entityTestMove(eid, testx, 0, tpos, centity));
             if (tmove == 0) {
                 // stop the motion
                 GX.entityVX(eid, 0);
 
                 // don't let the entity pass into the collision entity or tile
-                if (centity > 0) {
-                    GX.entityPos(eid, GX.entityX(centity) + GX.entityCollisionOffsetLeft(centity) - GX.entityWidth(eid) + GX.entityCollisionOffsetRight(eid), GX.entityY(eid));
+                if (centity.id > 0) {
+                    GX.entityPos(eid, GX.entityX(centity.id) + GX.entityCollisionOffsetLeft(centity.id) - GX.entityWidth(eid) + GX.entityCollisionOffsetRight(eid), GX.entityY(eid));
                 }
                 if (tpos.x > -1) {
                     GX.entityPos(eid, tpos.x * GX.tilesetWidth() - GX.entityWidth(eid) + GX.entityCollisionOffsetRight(eid), GX.entityY(eid));
@@ -1674,14 +1965,14 @@ var GX = new function() {
             // Test left movement
             testx = Math.round(GX.entityVX(eid) / GX.frameRate());
             if (testx > -1) { testx = -1 };
-            tmove = Math.round(_entityTestMove(eid, testx, 0, tpos, centity));
+            tmove = Math.round(await _entityTestMove(eid, testx, 0, tpos, centity));
             if (tmove == 0) {
                 // stop the motion
                 GX.entityVX(eid, 0);
 
                 // don't let the entity pass into the collision entity or tile
-                if (centity > 0) {
-                    GX.entityPos(eid, GX.entityX(centity) + GX.entityWidth(centity) - GX.entityCollisionOffsetRight(centity) - GX.entityCollisionOffsetLeft(eid), GX.entityY(eid));
+                if (centity.id > 0) {
+                    GX.entityPos(eid, GX.entityX(centity.id) + GX.entityWidth(centity.id) - GX.entityCollisionOffsetRight(centity.id) - GX.entityCollisionOffsetLeft(eid), GX.entityY(eid));
                 }
                 if (tpos.x > -1) {
                     GX.entityPos(eid, (tpos.x + 1) * GX.tilesetWidth() - GX.entityCollisionOffsetLeft(eid), GX.entityY(eid));
@@ -1690,7 +1981,7 @@ var GX = new function() {
         }
     }
 
-    function _entityTestMove (entity, mx, my, tpos, collisionEntity) {
+    async function _entityTestMove (entity, mx, my, tpos, collisionEntity) {
         tpos.x = -1;
         tpos.y = -1;
 
@@ -1711,7 +2002,7 @@ var GX = new function() {
             e.collisionTileY = tiles[i].y;
             e.collisionResult = false;
             
-            _onGameEvent(e);
+            await _onGameEvent(e);
             if (e.collisionResult) {
                 move = 0;
                 //tpos = tiles[i];
@@ -1729,10 +2020,10 @@ var GX = new function() {
             e.event = GX.EVENT_COLLISION_ENTITY;
             e.collisionEntity = entities[i];
             e.collisionResult = false;
-            _onGameEvent(e);
+            await _onGameEvent(e);
             if (e.collisionResult) {
                 move = 0;
-                collisionEntity = entities[i];
+                collisionEntity.id = entities[i];
             }
         }
 
@@ -1847,9 +2138,16 @@ var GX = new function() {
         }
     }
 
-    function _fullScreen(fullscreenFlag) {
+    function _fullScreen(fullscreenFlag, smooth) {
         if (fullscreenFlag != undefined) {
             if (fullscreenFlag) {
+                if (!smooth) {
+                    _canvas.style.imageRendering = "pixelated";
+                }
+                else {
+                    _canvas.style.imageRendering = undefined;
+                }
+        
                 if (_canvas.requestFullscreen) {
                     _canvas.requestFullscreen();
                     _fullscreenFlag = true;
@@ -1861,7 +2159,7 @@ var GX = new function() {
                 }
             }
         }
-        return _fullscreenFlag; //(window.innerHeight == screen.height);
+        return _qbBoolean(_fullscreenFlag);
     }
 
 
@@ -1986,17 +2284,20 @@ var GX = new function() {
 
     function _mouseY() {
         return Math.round((_mousePos.y - _scene.offsetY) / _scene.scaleY);
-    };
+    }
 
     function _mouseButton(button) {
         // TODO: need to decide whether to keep this here
         //       it is not needed for GX - only to support QB64
         return _mouseButtons[button-1];
-    };
+    }
 
     function _mouseWheel() {
-        return _mouseWheelFlag;
+        var mw = _mouseWheelFlag;
+        _mouseWheelFlag = 0;
+        return mw;
     }
+
     function _touchInput() {
         var ti = _touchInputFlag;
         _touchInputFlag = false;
@@ -2021,7 +2322,7 @@ var GX = new function() {
                 return GX.keyDown(di.inputId);
             }
         }
-        return false;
+        return _qbBoolean(false);
     }
 
 /*
@@ -2354,7 +2655,7 @@ var GX = new function() {
         if (enabled != undefined) {
             __debug.enabled = enabled;
         }
-        return __debug.enabled;
+        return _qbBoolean(__debug.enabled);
     }
 
 /*
@@ -2488,9 +2789,8 @@ var GX = new function() {
 
     this.ctx = function() { return _ctx; };
     this.canvas = function() { return _canvas; };
-    this.gl = function() { return _glctx; };
-    this.glcanvas = function() { return _glcanvas; };
     this.vfs = function() { return _vfs; };
+    this.getSound = function(sid) { return _sounds[sid]; };
     this.vfsCwd = function(cwd) {
         if (cwd != undefined) {
             _vfsCwd = cwd;
@@ -2510,6 +2810,7 @@ var GX = new function() {
     this.sceneMove = _sceneMove;
     this.scenePos = _scenePos;
     this.sceneResize = _sceneResize;
+    this.sceneWindowSize = _sceneWindowSize;
     this.sceneRows = _sceneRows;
     this.sceneScale = _sceneScale;
     this.sceneStart = _sceneStart;
@@ -2550,8 +2851,11 @@ var GX = new function() {
     this.entityVX = _entityVX;
     this.entityVY = _entityVY;
 	this.entityFrameNext = _entityFrameNext;
+    this.entityFrame = _entityFrame;
+    this.entityFrames = _entityFrames;
     this.entityFrameSet = _entityFrameSet;
     this.entityType = _entityType;
+    this.entityMapLayer = _entityMapLayer;
     this.entityCollisionOffset = _entityCollisionOffset;
     this.entityCollisionOffsetLeft = _entityCollisionOffsetLeft;
     this.entityCollisionOffsetTop = _entityCollisionOffsetTop;
@@ -2560,22 +2864,25 @@ var GX = new function() {
     this.entityCollide = _entityCollide;
     this.entityApplyGravity = _entityApplyGravity;
     this.entityVisible = _entityVisible;
-
     this.entityFrame = _entityFrame;
     this.entitySequence = _entitySequence;
     this.entitySequences = _entitySequences;
     this.entityFrames = _entityFrames;
+    this.entityRenderMode = _entityRenderMode;
 
-    
     this.mapColumns = _mapColumns;
     this.mapCreate = _mapCreate;
     this.mapLoad = _mapLoad;
     this.mapDraw = _mapDraw;
+    this.mapSave = _mapSave;
     this.mapIsometric = _mapIsometric;
     this.mapLayerAdd = _mapLayerAdd;
+    this.mapLayerInsert = _mapLayerInsert;
+    this.mapLayerRemove = _mapLayerRemove;
     this.mapLayerInit = _mapLayerInit;
     this.mapLayerVisible = _mapLayerVisible;
     this.mapLayers = _mapLayers;
+    this.mapResize = _mapResize;
     this.mapRows = _mapRows;
     this.mapTile = _mapTile;
 
@@ -2588,6 +2895,11 @@ var GX = new function() {
     this.tilesetRows = _tilesetRows;
     this.tilesetWidth = _tilesetWidth;
     this.tilesetReplaceImage = _tilesetReplaceImage;
+    this.tilesetAnimationCreate = _tilesetAnimationCreate;
+    this.tilesetAnimationAdd = _tilesetAnimationAdd;
+    this.tilesetAnimationRemove = _tilesetAnimationRemove;
+    this.tilesetAnimationFrames = _tilesetAnimationFrames;
+    this.tilesetAnimationSpeed = _tilesetAnimationSpeed;
 
     this.fontCharSpacing = _fontCharSpacing;
     this.fontCreate = _fontCreate;
@@ -2627,8 +2939,8 @@ var GX = new function() {
     this.sceneActive = function() { return _scene.active; }
 
     // constants
-    this.TRUE = true;
-    this.FALSE = false;
+    this.TRUE = -1;
+    this.FALSE = 0;
 
     this.EVENT_INIT = 1;
     this.EVENT_UPDATE = 2;
@@ -2761,6 +3073,9 @@ var GX = new function() {
     this.ACTION_JUMP = 5;
     this.ACTION_JUMP_RIGHT = 6;
     this.ACTION_JUMP_LEFT = 7;
+
+    this.ENTITY_RENDER_DEFAULT = 0;
+    this.ENTITY_RENDER_TOPDOWN = 1;
 
     this.SCENE_FOLLOW_NONE = 0;                // no automatic scene positioning (default)
     this.SCENE_FOLLOW_ENTITY_CENTER = 1;       // center the view on a specified entity
