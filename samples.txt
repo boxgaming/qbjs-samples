@@ -109,4 +109,4 @@
 "santasteve.zip", "GX Santa Steve", "vince", "", "Games, GX"
 "helicoid.bas", "Helicoid", "vince", "", "Graphics, Fun with Trig"
 "mobius.bas", "Mobius", "vince", "", "Graphics, Fun with Trig"
-"easter-egg.bas", "Easter Egg", "Recursive Fill on Egg Shape 2 lighted", "bplus", "Graphics"
+"easter-egg.bas", "Easter Egg", "bplus", "Recursive Fill on Egg Shape 2 lighted", "Graphics"
