@@ -110,3 +110,4 @@
 "helicoid.bas", "Helicoid", "vince", "", "Graphics, Fun with Trig"
 "mobius.bas", "Mobius", "vince", "", "Graphics, Fun with Trig"
 "easter-egg.bas", "Easter Egg", "bplus", "Recursive Fill on Egg Shape 2 lighted", "Graphics"
+"metaballs.bas", "Metaballs", "a740g,sprezzo", "Text mode lava lamp", "Graphics,Text Mode"
