@@ -112,5 +112,5 @@
 "easter-egg.bas", "Easter Egg", "bplus", "Recursive Fill on Egg Shape 2 lighted", "Graphics"
 "metaballs.bas", "Metaballs", "a740g,sprezzo", "Text mode lava lamp", "Graphics,Text Mode"
 "blockout.bas", "Blockout", "FellippeHeitor", "A Breakout clone with DXBall aspirations.", "Games"
-"turtle-graphics.bas", "Turtle Graphics", "sprezzo", "Basic "turtle graphics" setup. Draws a Koch snowflake by default."
-"tinybasic.zip", "Tiny Basic", "eddavis", "Tiny Basic by Ed Davis"
+"turtle-graphics.bas", "Turtle Graphics", "sprezzo", "Basic "turtle graphics" setup. Draws a Koch snowflake by default.", "Graphics"
+"tinybasic.zip", "Tiny Basic", "eddavis", "Tiny Basic by Ed Davis", "Interpreter"
