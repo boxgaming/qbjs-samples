@@ -1,3 +1,4 @@
+async function __qbjs_run() {
 async function __qblib_lib_lang_system_bas() {
 /* global constants: */ 
 /* shared variables: */ 
@@ -1304,4 +1305,5 @@ if (QB.halted()) { return; };
    //-------- BEGIN JS native code block --------
     window.dispatchEvent(new Event("resize"));
 //-------- END JS native code block --------
+}
 }
