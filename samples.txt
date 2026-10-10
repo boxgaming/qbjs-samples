@@ -113,4 +113,4 @@
 "metaballs.bas", "Metaballs", "a740g,sprezzo", "Text mode lava lamp", "Graphics,Text Mode"
 "blockout.bas", "Blockout", "FellippeHeitor", "A Breakout clone with DXBall aspirations.", "Games"
 "turtle-graphics.bas", "Turtle Graphics", "sprezzo", "Basic "turtle graphics" setup. Draws a Koch snowflake by default."
-"tinybasic.bas", "Tiny Basic", "eddavis", "Tiny Basic by Ed Davis"
+"tinybasic.zip", "Tiny Basic", "eddavis", "Tiny Basic by Ed Davis"
