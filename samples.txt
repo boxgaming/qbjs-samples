@@ -27,7 +27,7 @@
 "laser-cannon-pointer.bas", "Plasma Laser Cannon Pointer", "bplus", "", "Graphics, Mouse"
 "qbjs-starscape.bas", "QBJS Starscape", "vince", "", "Graphics, Space, Fun with Trig"
 "le-bombe.bas", "Le Bombe", "bplus", "", "Graphics, Particle Physics"
-"missle-command.bas", "Missle Command", "bplus", "", "Games, Mouse"
+"missile-command.bas", "Missile Command", "bplus", "", "Games, Mouse"
 "star-trekking.bas", "Star Trekking", "bplus", "Starfield simulation", "Graphics, Space"
 "space-orbs.bas", "Space Orbs", "Dav", "Screensaver of orbs pulsating in space", "Graphics, Space"
 "textured-balls.bas", "Textured Balls", "Dav", "Draws balls with various textures", "Graphics"
