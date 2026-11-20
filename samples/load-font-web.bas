@@ -6,7 +6,7 @@ f = _LoadFont("Arial, Helvetica, sans-serif", 60)
 _Font f
 
 Dim img As Long
-img = _NewImage(_PrintWidth("Hello World!"), _FontHeight, 32)
+img = _NewImage(_PrintWidth("Hello World!"), _FontHeight, 12)
 _Dest img
 Color 15
 _PrintMode _KeepBackground
